@@ -186,6 +186,10 @@ pub struct Server {
     /// left out of its configuration.
     #[serde(default)]
     pub mirror: bool,
+    /// Devices (ids) a mirror still commands, on purpose (one speaker to try
+    /// announcements on): `mirror_except = ["alexa:G0…"]`.
+    #[serde(default)]
+    pub mirror_except: Vec<String>,
 }
 
 fn default_language() -> String {
@@ -210,6 +214,7 @@ impl Default for Server {
             demo: false,
             demo_seed: None,
             mirror: false,
+            mirror_except: Vec::new(),
         }
     }
 }

@@ -49,6 +49,9 @@ pub struct HubOptions {
     /// A mirror of a house that runs elsewhere: every order is journaled
     /// and refused ([`CommandError::Mirror`]), none reaches a driver.
     pub mirror: bool,
+    /// Devices (ids) a mirror still commands, on purpose: one speaker to try
+    /// announcements on while the rest of the house stays the real one's.
+    pub mirror_except: Vec<String>,
 }
 
 impl Default for HubOptions {
@@ -64,6 +67,7 @@ impl Default for HubOptions {
             event_capacity: 1024,
             command_timeout: Duration::from_secs(5),
             mirror: false,
+            mirror_except: Vec::new(),
         }
     }
 }
@@ -1749,7 +1753,16 @@ impl Hub {
         // but those that change nothing outside Moli (it runs them in the
         // shadow of the real house), and connecting an account (`sign_in`:
         // Moli signs in to a cloud, no device of the house moves).
-        if self.0.opts.mirror && !prepared.inside && &*prepared.key != SIGN_IN {
+        if self.0.opts.mirror
+            && !prepared.inside
+            && &*prepared.key != SIGN_IN
+            && !self
+                .0
+                .opts
+                .mirror_except
+                .iter()
+                .any(|d| d == prepared.device.id.as_str())
+        {
             return Err(CommandError::Mirror);
         }
         let Prepared {
