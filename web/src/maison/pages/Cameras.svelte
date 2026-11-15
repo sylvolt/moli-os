@@ -4,6 +4,7 @@
   import Icon from '../ui/Icon.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
   import LiveVideo from '../ui/LiveVideo.svelte';
+  import CameraReview from '../ui/CameraReview.svelte';
   import SecurityPanel from '../ui/SecurityPanel.svelte';
 
   // The layout's cameras first (their names, pace, battery), then any other.
@@ -33,7 +34,7 @@
   $effect(() => {
     const id = open;
     seen = [];
-    if (!id) return;
+    if (!id || hub.devices[id]?.review) return;
     const d = hub.devices[id];
     const keys = KINDS.filter(([k]) => d?.points.some((p) => p.key === k));
     seenLoading = true;
@@ -96,13 +97,17 @@
         <button class="close" onclick={() => (open = null)} aria-label={t('commun.fermer')}><Icon name="close" size={22} /></button>
       </div>
       {#key current.id}
-        {#if hub.devices[current.id]?.live && !current.locked}
+        {#if hub.devices[current.id]?.review}
+          <!-- Its past from the NVR: frieze, events, recordings, zones. -->
+          <CameraReview id={current.id} name={current.name} live={hub.devices[current.id]?.live && !current.locked} battery={current.battery} />
+        {:else if hub.devices[current.id]?.live && !current.locked}
           <!-- Live video, played by this browser straight from the camera. -->
           <div class="live-slot"><LiveVideo id={current.id} /></div>
         {:else}
           <CameraTile id={current.id} name={current.name} refresh={current.battery ? 0 : 2} battery={current.battery} big />
         {/if}
       {/key}
+      {#if !hub.devices[current.id]?.review}
       <div class="seen">
         <h3>{t('salon.cameras.aujourdhui')}</h3>
         {#if seenLoading}
@@ -117,6 +122,7 @@
           <p class="muted">{t('salon.cameras.rien')}</p>
         {/if}
       </div>
+      {/if}
     </div>
   </div>
 {/if}
