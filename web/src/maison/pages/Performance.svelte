@@ -109,9 +109,11 @@
   }
 
   .slot {
-    padding: 0;
     min-width: 0;
   }
+
+  /* The card's own frame (\`ha-card\`) is not an element outside Home
+     Assistant: Moli's card gives the margins. */
 
   .slot.wide {
     grid-column: 1 / -1;
