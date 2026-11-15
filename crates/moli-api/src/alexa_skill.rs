@@ -566,22 +566,20 @@ async fn disarm(hub: &moli_runtime::Hub, skill: &AlexaSkill, request: &Json) -> 
             "alexa skill: wrong voice code"
         );
         // Asked again in the same breath, until the lock.
-        return match locked {
-            Some(minutes) => say(moli_i18n::tr!(
+        if let Some(minutes) = locked {
+            return say(moli_i18n::tr!(
                 "serveur.alexa_skill.code_bloque",
                 minutes = minutes
-            )),
-            None => {
-                // Said aloud: the right word, never « essai(s) ».
-                let left = VOICE_TRIES - lock_of(skill).failures;
-                let text = if left == 1 {
-                    moli_i18n::tr!("serveur.alexa_skill.code_faux_dernier")
-                } else {
-                    moli_i18n::tr!("serveur.alexa_skill.code_faux_encore", essais = left)
-                };
-                speech_keeping(&text, &json!({ "disarm": true }))
-            }
+            ));
+        }
+        // Said aloud: the right word, never « essai(s) ».
+        let left = VOICE_TRIES - lock_of(skill).failures;
+        let text = if left == 1 {
+            moli_i18n::tr!("serveur.alexa_skill.code_faux_dernier")
+        } else {
+            moli_i18n::tr!("serveur.alexa_skill.code_faux_encore", essais = left)
         };
+        return speech_keeping(&text, &json!({ "disarm": true }));
     }
     lock_of(skill).right();
     let sent = hub
