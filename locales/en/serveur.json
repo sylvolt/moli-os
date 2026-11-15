@@ -1,4 +1,12 @@
 {
+  "serveur.alexa_skill.acteur": "Alexa (voice code)",
+  "serveur.alexa_skill.code_bloque": "Voice code locked for {minutes} minutes after several mistakes.",
+  "serveur.alexa_skill.code_faux": "Wrong code.",
+  "serveur.alexa_skill.desarmee": "Alarm disarmed.",
+  "serveur.alexa_skill.desarmement_echoue": "I could not disarm: {raison}",
+  "serveur.alexa_skill.pas_de_code_vocal": "No voice code is set. Disarm from the screen, with the code.",
+  "serveur.alexa_skill.pas_de_desarmement": "Disarming by voice is not on. Disarm from the screen, with the code.",
+  "serveur.alexa_skill.quel_code": "What is the voice code?",
   "serveur.alexa_skill.aide": "Ask me about the house, for example: is the workshop door closed?",
   "serveur.alexa_skill.au_revoir": "See you later.",
   "serveur.alexa_skill.bonjour": "Yes? What do you want to know about the house?",

@@ -483,7 +483,7 @@ async fn serve(config: Config, boot: Instant) -> anyhow::Result<()> {
         home_path: Some(config.server.data_dir.join("home.json")),
         alexa_skill: config.alexa_skill.as_ref().map(|s| {
             // Without the assistant, the skill says it cannot answer.
-            moli_api::AlexaSkill::new(s.skill_id.clone())
+            moli_api::AlexaSkill::new(s.skill_id.clone(), s.disarm.clone())
         }),
         assistant,
         automations: Some(automations),

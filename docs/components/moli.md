@@ -364,6 +364,13 @@ skill_id = "amzn1.ask.skill.…"   # l'id du skill dans la console Amazon (pas u
 - L'assistant agit **en agent, sous la garde** (`asker` « alexa ») : une pièce ou un appareil protégé
   attend une personne, désarmer l'alarme veut le code ; jamais donné à voix haute.
 - 6,5 s au plus pour répondre (Alexa attend 8 s) : au-delà, « Je cherche encore… ».
+- **Désarmer à la voix** (facultatif, `[alexa_skill] disarm = "alarme:maison/mode"`) : intent
+  `DisarmIntent` (« désarme l'alarme ») → « Quel est le code vocal ? » → `CodeIntent` (un nombre). Le
+  code vocal est **à part** (`moli-os secrets set alexa_skill voice_code`, 4 à 8 chiffres, jamais le
+  code de la maison), vérifié par la route elle-même, **jamais par le modèle**, comparé sur son
+  empreinte ; 3 erreurs de suite le bloquent 30 min, puis le double à chaque fois (un jour au plus).
+  Juste, la maison écrit `off` (origine système, journal « Alexa (code vocal) »). Un code dit à voix
+  haute s'entend et reste dans l'historique vocal d'Amazon : d'où un code propre à ce seul geste.
 - Le modèle d'interaction (dans la console) : Alexa ne met dans l'emplacement libre
   (`AMAZON.SearchQuery`) que les mots qui suivent la phrase porteuse ; d'où **un intent par mot
   d'entrée**, nommé `Q_<mots>` (`Q_combien` : « combien {question} », `Q_est_ce_que`, `Q_mets`…),

@@ -52,17 +52,85 @@ type Chains = Arc<Mutex<HashMap<String, (Instant, Vec<Vec<u8>>)>>>;
 #[derive(Clone, Debug)]
 pub struct AlexaSkill {
     pub skill_id: String,
+    /// The point to write `off` to when the voice code is right (the
+    /// alarm's `mode`); `None`: no disarming by voice.
+    pub disarm: Option<String>,
     chains: Chains,
+    lock: Arc<Mutex<VoiceLock>>,
 }
 
 impl AlexaSkill {
     #[must_use]
-    pub fn new(skill_id: String) -> Self {
+    pub fn new(skill_id: String, disarm: Option<String>) -> Self {
         Self {
             skill_id,
+            disarm,
             chains: Arc::default(),
+            lock: Arc::default(),
         }
     }
+}
+
+/// Where the voice code lives in the vault: `alexa_skill/voice_code`, set by
+/// a person through a pipe (`moli-os secrets set alexa_skill voice_code`),
+/// never the house's code.
+const VOICE_INSTANCE: &str = "alexa_skill";
+const VOICE_CODE: &str = "voice_code";
+/// Wrong codes in a row before the voice code is locked.
+const VOICE_TRIES: u32 = 3;
+/// The first lock; each one after doubles it (a day at most).
+const VOICE_LOCK: Duration = Duration::from_secs(30 * 60);
+
+/// Wrong voice codes, and how long the voice code is locked.
+#[derive(Debug, Default)]
+pub(crate) struct VoiceLock {
+    failures: u32,
+    lockouts: u32,
+    until: Option<Instant>,
+}
+
+impl VoiceLock {
+    /// Locked now, and for how many minutes still.
+    pub(crate) fn locked(&self, now: Instant) -> Option<u64> {
+        self.until
+            .filter(|u| *u > now)
+            .map(|u| (u - now).as_secs().div_ceil(60))
+    }
+
+    /// A wrong code: locked after [`VOICE_TRIES`] in a row. The minutes of
+    /// the lock it starts, if it does.
+    pub(crate) fn wrong(&mut self, now: Instant) -> Option<u64> {
+        self.failures += 1;
+        if self.failures < VOICE_TRIES {
+            return None;
+        }
+        self.failures = 0;
+        let lock = VOICE_LOCK
+            .saturating_mul(1 << self.lockouts.min(6))
+            .min(Duration::from_secs(24 * 3600));
+        self.lockouts += 1;
+        self.until = Some(now + lock);
+        Some(lock.as_secs() / 60)
+    }
+
+    pub(crate) fn right(&mut self) {
+        *self = Self::default();
+    }
+}
+
+/// The code as heard: digits only (« 12 34 » → « 1234 »), 4 to 8 of them.
+pub(crate) fn heard_code(slot: &str) -> Option<String> {
+    let digits: String = slot.chars().filter(char::is_ascii_digit).collect();
+    let others = slot
+        .chars()
+        .any(|c| !c.is_ascii_digit() && !c.is_whitespace());
+    (!others && (4..=8).contains(&digits.len())).then_some(digits)
+}
+
+/// The same code, compared on their digests (no early exit on the text).
+pub(crate) fn same_code(heard: &str, kept: &str) -> bool {
+    let d = |s: &str| ring::digest::digest(&ring::digest::SHA256, s.trim().as_bytes());
+    d(heard).as_ref() == d(kept).as_ref()
 }
 
 /// The certificate URL is Amazon's, and only Amazon's.
@@ -221,6 +289,20 @@ pub(crate) fn spoken(text: &str) -> String {
     }
 }
 
+/// A spoken answer that keeps the session open with these attributes.
+fn speech_keeping(text: &str, attributes: &Json) -> Response {
+    let out = json!({
+        "version": "1.0",
+        "response": {
+            "outputSpeech": { "type": "PlainText", "text": text },
+            "reprompt": { "outputSpeech": { "type": "PlainText", "text": text } },
+            "shouldEndSession": false,
+        },
+        "sessionAttributes": attributes,
+    });
+    axum::Json(out).into_response()
+}
+
 fn speech(text: &str, end: bool, history: Option<&Json>) -> Response {
     let mut out = json!({
         "version": "1.0",
@@ -311,6 +393,7 @@ fn history(request: &Json) -> Vec<moli_assistant::Message> {
 }
 
 pub(crate) async fn skill(
+    axum::extract::State(hub): axum::extract::State<moli_runtime::Hub>,
     Extension(skill): Extension<Option<AlexaSkill>>,
     Extension(Moli(moli)): Extension<Moli>,
     headers: HeaderMap,
@@ -348,6 +431,8 @@ pub(crate) async fn skill(
         ("IntentRequest", "AMAZON.StopIntent" | "AMAZON.CancelIntent" | "AMAZON.NoIntent") => {
             speech(&moli_i18n::tr!("serveur.alexa_skill.au_revoir"), true, None)
         }
+        ("IntentRequest", "DisarmIntent") => ask_code(&hub, &skill),
+        ("IntentRequest", "CodeIntent") => disarm(&hub, &skill, &request).await,
         ("IntentRequest", "AMAZON.HelpIntent") => speech(
             &moli_i18n::tr!("serveur.alexa_skill.aide"),
             false,
@@ -366,6 +451,85 @@ pub(crate) async fn skill(
         // The session ended (or a request this skill does not use).
         _ => speech("", true, None),
     }
+}
+
+/// « Désarme l'alarme »: the voice code is asked (never the house's).
+fn ask_code(hub: &moli_runtime::Hub, skill: &AlexaSkill) -> Response {
+    let say = |key: &str| speech(&moli_i18n::tr(key), true, None);
+    if skill.disarm.is_none() {
+        return say("serveur.alexa_skill.pas_de_desarmement");
+    }
+    if hub
+        .secret(&moli_core::InstanceId::from(VOICE_INSTANCE), VOICE_CODE)
+        .is_none()
+    {
+        return say("serveur.alexa_skill.pas_de_code_vocal");
+    }
+    if let Some(minutes) = lock_of(skill).locked(Instant::now()) {
+        return speech(
+            &moli_i18n::tr!("serveur.alexa_skill.code_bloque", minutes = minutes),
+            true,
+            None,
+        );
+    }
+    speech_keeping(
+        &moli_i18n::tr!("serveur.alexa_skill.quel_code"),
+        &json!({ "disarm": true }),
+    )
+}
+
+fn lock_of(skill: &AlexaSkill) -> std::sync::MutexGuard<'_, VoiceLock> {
+    skill.lock.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// The code said after « Quel est le code vocal ? »: checked here, never by
+/// the model; right, the alarm is disarmed by the house itself.
+async fn disarm(hub: &moli_runtime::Hub, skill: &AlexaSkill, request: &Json) -> Response {
+    let say = |text: String| speech(&text, true, None);
+    let (Some(point), true) = (
+        skill.disarm.as_deref(),
+        request["session"]["attributes"]["disarm"] == json!(true),
+    ) else {
+        return speech(
+            &moli_i18n::tr!("serveur.alexa_skill.pas_compris"),
+            false,
+            None,
+        );
+    };
+    let Some(kept) = hub.secret(&moli_core::InstanceId::from(VOICE_INSTANCE), VOICE_CODE) else {
+        return say(moli_i18n::tr!("serveur.alexa_skill.pas_de_code_vocal"));
+    };
+    let now = Instant::now();
+    if let Some(minutes) = lock_of(skill).locked(now) {
+        return say(moli_i18n::tr!(
+            "serveur.alexa_skill.code_bloque",
+            minutes = minutes
+        ));
+    }
+    let heard = question(request)
+        .and_then(|q| heard_code(&q))
+        .unwrap_or_default();
+    if heard.is_empty() || !same_code(&heard, &kept) {
+        let locked = lock_of(skill).wrong(now);
+        tracing::warn!(locked = locked.is_some(), "alexa skill: wrong voice code");
+        return say(match locked {
+            Some(minutes) => moli_i18n::tr!("serveur.alexa_skill.code_bloque", minutes = minutes),
+            None => moli_i18n::tr!("serveur.alexa_skill.code_faux"),
+        });
+    }
+    lock_of(skill).right();
+    let sent = hub
+        .command(
+            &moli_core::PointId::from(point.to_owned()),
+            moli_core::Value::Text("off".into()),
+            moli_core::Origin::System,
+            Some(moli_i18n::tr!("serveur.alexa_skill.acteur")),
+        )
+        .await;
+    say(match sent {
+        Ok(()) => moli_i18n::tr!("serveur.alexa_skill.desarmee"),
+        Err(e) => moli_i18n::tr!("serveur.alexa_skill.desarmement_echoue", raison = e),
+    })
 }
 
 async fn answer(moli: &moli_assistant::Assistant, request: &Json, asked: String) -> Response {
@@ -481,6 +645,30 @@ mod tests {
         assert!(
             for_this_skill(&req(old, "amzn1.ask.skill.moli"), "amzn1.ask.skill.moli", s).is_err()
         );
+    }
+
+    #[test]
+    fn the_voice_code_heard_compared_and_locked() {
+        assert_eq!(heard_code("12 34").as_deref(), Some("1234"));
+        assert_eq!(heard_code("123456").as_deref(), Some("123456"));
+        assert!(heard_code("123").is_none(), "too short");
+        assert!(heard_code("123456789").is_none(), "too long");
+        assert!(heard_code("douze").is_none());
+        assert!(same_code("1234", " 1234\n"));
+        assert!(!same_code("1235", "1234"));
+        let mut lock = VoiceLock::default();
+        let t0 = Instant::now();
+        assert_eq!(lock.wrong(t0), None);
+        assert_eq!(lock.wrong(t0), None);
+        assert_eq!(lock.wrong(t0), Some(30), "third wrong code: 30 min");
+        assert_eq!(lock.locked(t0), Some(30));
+        assert_eq!(lock.locked(t0 + Duration::from_secs(31 * 60)), None);
+        for _ in 0..2 {
+            lock.wrong(t0);
+        }
+        assert_eq!(lock.wrong(t0), Some(60), "then twice as long");
+        lock.right();
+        assert_eq!(lock.locked(t0), None);
     }
 
     #[test]

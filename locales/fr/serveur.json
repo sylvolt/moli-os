@@ -1,4 +1,12 @@
 {
+  "serveur.alexa_skill.acteur": "Alexa (code vocal)",
+  "serveur.alexa_skill.code_bloque": "Code vocal bloqué pour {minutes} minutes après plusieurs erreurs.",
+  "serveur.alexa_skill.code_faux": "Code incorrect.",
+  "serveur.alexa_skill.desarmee": "Alarme désarmée.",
+  "serveur.alexa_skill.desarmement_echoue": "Je n’ai pas pu désarmer : {raison}",
+  "serveur.alexa_skill.pas_de_code_vocal": "Aucun code vocal n’est enregistré. Désarme depuis l’écran, avec le code.",
+  "serveur.alexa_skill.pas_de_desarmement": "Le désarmement à la voix n’est pas activé. Désarme depuis l’écran, avec le code.",
+  "serveur.alexa_skill.quel_code": "Quel est le code vocal ?",
   "serveur.alexa_skill.aide": "Pose-moi une question sur la maison, par exemple : est-ce que la porte de l’atelier est fermée ?",
   "serveur.alexa_skill.au_revoir": "À plus tard.",
   "serveur.alexa_skill.bonjour": "Oui ? Que veux-tu savoir sur la maison ?",
