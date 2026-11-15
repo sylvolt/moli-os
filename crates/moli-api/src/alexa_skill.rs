@@ -319,6 +319,7 @@ pub(crate) async fn skill(
     let Some(skill) = skill else {
         return StatusCode::NOT_FOUND.into_response();
     };
+    tracing::info!(bytes = body.len(), "alexa skill: received");
     let request = match proved(&skill, &headers, &body).await {
         Ok(r) => r,
         Err(why) => {
@@ -337,6 +338,7 @@ pub(crate) async fn skill(
     let intent = request["request"]["intent"]["name"]
         .as_str()
         .unwrap_or_default();
+    tracing::info!(kind, intent, "alexa skill: request");
     match (kind, intent) {
         ("LaunchRequest", _) => speech(
             &moli_i18n::tr!("serveur.alexa_skill.bonjour"),
