@@ -1,4 +1,12 @@
 {
+  "serveur.alexa_skill.aide": "Ask me about the house, for example: is the workshop door closed?",
+  "serveur.alexa_skill.au_revoir": "See you later.",
+  "serveur.alexa_skill.bonjour": "Yes? What do you want to know about the house?",
+  "serveur.alexa_skill.encore": "Anything else?",
+  "serveur.alexa_skill.panne": "Moli cannot answer right now.",
+  "serveur.alexa_skill.pas_compris": "I did not get the question. Can you say it again?",
+  "serveur.alexa_skill.pas_d_assistant": "Moli's assistant is not set up.",
+  "serveur.alexa_skill.trop_long": "Still looking. Ask me again in a moment.",
   "serveur.acces.refuse": "access denied: home network or Cloudflare Access only",
   "serveur.limite.trop_de_demandes": "too many requests in a row: try again in a few seconds",
   "serveur.limite.trop_de_flux": "too many live streams open: close a tab or try again later",

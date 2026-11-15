@@ -68,12 +68,25 @@ pub struct Config {
     /// Its API key: `moli-os secrets set assistant api_key`.
     #[serde(default)]
     pub assistant: Option<moli_assistant::Config>,
+    /// A private Alexa skill the assistant answers (« Alexa, demande à
+    /// Moli… »): its id in Amazon's developer console. Not a secret: every
+    /// request is checked to be Amazon's, signed, for this skill.
+    #[serde(default)]
+    pub alexa_skill: Option<AlexaSkillConfig>,
     /// Automations: the house's position (sunrise, sunset).
     #[serde(default)]
     pub automations: moli_automation::Config,
     /// The house's time zone, resolved once and given to every section.
     #[serde(skip)]
     pub zone: crate::timezone::Zone,
+}
+
+/// `[alexa_skill]`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AlexaSkillConfig {
+    /// `amzn1.ask.skill.…`
+    pub skill_id: String,
 }
 
 /// Where and when agents need a human's approval. Edited by humans only:

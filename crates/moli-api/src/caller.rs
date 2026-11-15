@@ -90,13 +90,16 @@ fn guest_allowed(method: &Method, path: &str) -> bool {
         || (path.starts_with("/api/people/") && path.ends_with("/password"))
 }
 
-/// What a stranger may reach: the dashboard's files (its sign-in page) and
-/// signing in. Nothing that reads or changes the house.
+/// What a stranger may reach: the dashboard's files (its sign-in page),
+/// signing in, and the Alexa skill (Amazon's servers are strangers: the
+/// route believes nothing before Amazon's signature for this very skill).
+/// Nothing else that reads or changes the house.
 fn public(method: &Method, path: &str) -> bool {
     let api = path.starts_with("/api/") || path == "/api" || path.starts_with("/mcp");
     (!api && (method == Method::GET || method == Method::HEAD))
         || path == "/api/session"
         || (path == "/api/invitation" && method == Method::POST)
+        || (path == "/api/alexa/skill" && method == Method::POST)
 }
 
 /// What a visitor may not change in a demo house: everything but playing

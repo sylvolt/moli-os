@@ -1,4 +1,12 @@
 {
+  "serveur.alexa_skill.aide": "Pose-moi une question sur la maison, par exemple : est-ce que la porte de l’atelier est fermée ?",
+  "serveur.alexa_skill.au_revoir": "À plus tard.",
+  "serveur.alexa_skill.bonjour": "Oui ? Que veux-tu savoir sur la maison ?",
+  "serveur.alexa_skill.encore": "Autre chose ?",
+  "serveur.alexa_skill.panne": "Moli ne peut pas répondre pour l’instant.",
+  "serveur.alexa_skill.pas_compris": "Je n’ai pas compris la question. Tu peux la redire ?",
+  "serveur.alexa_skill.pas_d_assistant": "L’assistant de Moli n’est pas configuré.",
+  "serveur.alexa_skill.trop_long": "Je cherche encore. Redemande-moi dans un instant.",
   "serveur.acces.refuse": "accès refusé : réseau de la maison, ou Cloudflare Access",
   "serveur.limite.trop_de_demandes": "trop de demandes à la suite : réessaie dans quelques secondes",
   "serveur.limite.trop_de_flux": "trop de flux en direct ouverts : ferme un onglet ou réessaie plus tard",
