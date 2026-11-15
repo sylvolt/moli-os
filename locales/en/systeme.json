@@ -215,6 +215,8 @@
   "systeme.pilotes.philips.desc": "Philips TVs (Android TV): power, keys, apps, Ambilight.",
   "systeme.pilotes.frigate.nom": "Frigate",
   "systeme.pilotes.frigate.desc": "Cameras analyzed by Frigate: people, cars, animals.",
+  "systeme.pilotes.victron.nom": "Victron (Cerbo GX)",
+  "systeme.pilotes.victron.desc": "Victron battery, panels, inverter and EV charger, through the GX's MQTT.",
   "systeme.pilotes.bambu.nom": "3D printer",
   "systeme.pilotes.bambu.desc": "Bambu Lab printers, locally.",
   "systeme.pilotes.tapo.nom": "Tapo",

@@ -2239,6 +2239,7 @@ dependencies = [
  "moli-telegram",
  "moli-tuya",
  "moli-vicare",
+ "moli-victron",
  "moli-voltalis",
  "moli-weather",
  "moli-z2m",
@@ -2553,6 +2554,21 @@ dependencies = [
  "moli-net",
  "moli-runtime",
  "ring",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "moli-victron"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "moli-core",
+ "moli-i18n",
+ "moli-runtime",
+ "rumqttc",
  "serde",
  "serde_json",
  "tokio",

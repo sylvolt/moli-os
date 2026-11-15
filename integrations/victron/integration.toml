@@ -1,0 +1,23 @@
+[integration]
+id = "victron"
+name = "Victron Energy (GX : Cerbo GX, Venus OS)"
+brands = ["Victron Energy"]
+models = ["Cerbo GX", "Venus OS"]
+transport = "mqtt"
+driver = "victron"
+crate = "moli-victron"
+
+[discovery]
+# No discovery: the instance gives the GX's address (« MQTT on LAN » enabled).
+mdns = []
+ssdp = []
+ports = [1883]
+
+[needs]
+secrets = []
+vars = []
+options = ["host"]
+
+[origin]
+reused = "victron_mqtt (Apache-2.0, Tomer-w) : chemins des sujets, unités et codes d'état ; chemins D-Bus documentés de Venus OS ; aucun code copié"
+author = "agent"

@@ -1343,6 +1343,7 @@ const KINDS: &[&str] = &[
     "vicare",
     "philips",
     "frigate",
+    "victron",
     "bambu",
     "esphome",
     "alexa",
@@ -1578,6 +1579,9 @@ fn build_driver(
             config.options.clone().try_into().with_context(context)?,
         )),
         "frigate" => Arc::new(moli_frigate::Frigate::new(
+            config.options.clone().try_into().with_context(context)?,
+        )),
+        "victron" => Arc::new(moli_victron::Victron::new(
             config.options.clone().try_into().with_context(context)?,
         )),
         "bambu" => Arc::new(moli_bambu::Bambu::new(
