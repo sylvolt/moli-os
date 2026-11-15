@@ -418,6 +418,7 @@ fn open_hub(config: &Config) -> anyhow::Result<Hub> {
         secrets,
         guard: config.guard.policy()?,
         mirror: config.server.mirror,
+        mirror_except: config.server.mirror_except.clone(),
         ..HubOptions::default()
     })
     .context("cannot open the data directory (labels, journal, secrets)")

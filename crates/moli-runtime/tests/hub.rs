@@ -242,6 +242,20 @@ async fn some_orders_want_the_code_each_time_even_from_a_session() {
 }
 
 #[tokio::test]
+async fn a_mirror_commands_the_devices_it_is_told_to() {
+    let (hub, _cancel) = start_with(HubOptions {
+        mirror: true,
+        mirror_except: vec!["fake:plug1".into()],
+        ..HubOptions::default()
+    })
+    .await;
+    hub.command(&point("state"), Value::Bool(true), Origin::Ui, None)
+        .await
+        .unwrap();
+    assert_eq!(hub.state(&point("state")).unwrap().value, Value::Bool(true));
+}
+
+#[tokio::test]
 async fn a_mirror_house_journals_every_order_and_sends_none() {
     let (hub, _cancel) = start_with(HubOptions {
         mirror: true,
