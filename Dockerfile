@@ -17,10 +17,12 @@ COPY . .
 COPY --from=web /web/dist web/dist
 # Opt-in: smaller runtime, at the cost of symbolized in-process backtraces.
 ARG MOLI_STRIP_SYMBOLS=false
+# release (production) ou labo (reconstruction rapide, branche de la maison).
+ARG MOLI_PROFILE=release
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \
-    cargo build --release --locked -p moli-os && \
-    cp target/release/moli-os /moli-os.unstripped && \
+    cargo build --profile "$MOLI_PROFILE" --locked -p moli-os && \
+    cp "target/$MOLI_PROFILE/moli-os" /moli-os.unstripped && \
     cp /moli-os.unstripped /moli-os && \
     case "$MOLI_STRIP_SYMBOLS" in \
       false) ;; \

@@ -138,3 +138,13 @@ codegen-units = 1
 # Symbols stay (a backtrace from a frozen process is worth ~1 MB); debug info goes.
 strip = "debuginfo"
 # panic = "unwind" volontaire : le superviseur capture les panics des pilotes.
+
+# Profil « labo » (branche locale de la maison) : reconstruire vite pendant la mise au point des
+# écrans, au prix d'un binaire un peu plus gros. La production garde `release`.
+#   docker build --build-arg MOLI_PROFILE=labo -t moli-os:maison .
+[profile.labo]
+inherits = "release"
+opt-level = 2
+lto = false
+codegen-units = 16
+incremental = true
