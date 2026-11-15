@@ -431,6 +431,7 @@ pub(crate) async fn skill(
         ("IntentRequest", "AMAZON.StopIntent" | "AMAZON.CancelIntent" | "AMAZON.NoIntent") => {
             speech(&moli_i18n::tr!("serveur.alexa_skill.au_revoir"), true, None)
         }
+        ("IntentRequest", "ArmIntent") => arm(&hub, &skill, &request).await,
         ("IntentRequest", "DisarmIntent") => ask_code(&hub, &skill),
         ("IntentRequest", "CodeIntent") => disarm(&hub, &skill, &request).await,
         ("IntentRequest", "AMAZON.HelpIntent") => speech(
@@ -451,6 +452,48 @@ pub(crate) async fn skill(
         // The session ended (or a request this skill does not use).
         _ => speech("", true, None),
     }
+}
+
+/// The mode asked for (`ALARM_MODE` slot, its id once Alexa resolved it):
+/// night when none is said.
+pub(crate) fn mode_asked(request: &Json) -> &'static str {
+    let slot = &request["request"]["intent"]["slots"]["mode"];
+    let id = slot["resolutions"]["resolutionsPerAuthority"][0]["values"][0]["value"]["id"]
+        .as_str()
+        .or_else(|| slot["value"].as_str())
+        .unwrap_or_default()
+        .to_lowercase();
+    match id.as_str() {
+        "home" | "présence" | "presence" | "jour" | "maison" => "home",
+        "away" | "absence" | "absent" | "vacances" => "away",
+        _ => "night",
+    }
+}
+
+/// « Arme l'alarme en nuit »: no code, as an agent the file allows
+/// (`[[guard.agents_may]]`); never through the model.
+async fn arm(hub: &moli_runtime::Hub, skill: &AlexaSkill, request: &Json) -> Response {
+    let say = |text: String| speech(&text, true, None);
+    let Some(point) = skill.disarm.as_deref() else {
+        return say(moli_i18n::tr!("serveur.alexa_skill.pas_de_desarmement"));
+    };
+    let mode = mode_asked(request);
+    let sent = hub
+        .command(
+            &moli_core::PointId::from(point.to_owned()),
+            moli_core::Value::Text(mode.into()),
+            moli_core::Origin::Assistant,
+            Some(moli_i18n::tr!("serveur.alexa_skill.acteur_armement")),
+        )
+        .await;
+    let name = moli_i18n::tr(&format!("serveur.alexa_skill.mode_{mode}"));
+    say(match sent {
+        Ok(()) => moli_i18n::tr!("serveur.alexa_skill.armee", mode = name),
+        Err(moli_runtime::CommandError::NeedsApproval { .. }) => {
+            moli_i18n::tr!("serveur.alexa_skill.armement_retenu")
+        }
+        Err(e) => moli_i18n::tr!("serveur.alexa_skill.armement_echoue", raison = e),
+    })
 }
 
 /// « Désarme l'alarme »: the voice code is asked (never the house's).
@@ -669,6 +712,23 @@ mod tests {
         assert_eq!(lock.wrong(t0), Some(60), "then twice as long");
         lock.right();
         assert_eq!(lock.locked(t0), None);
+    }
+
+    #[test]
+    fn the_mode_asked_to_arm() {
+        let with = |slot: Json| json!({ "request": { "intent": { "name": "ArmIntent", "slots": { "mode": slot } } } });
+        let resolved = json!({ "name": "mode", "value": "la nuit", "resolutions": { "resolutionsPerAuthority": [
+            { "values": [ { "value": { "name": "nuit", "id": "night" } } ] } ] } });
+        assert_eq!(mode_asked(&with(resolved)), "night");
+        assert_eq!(
+            mode_asked(&with(json!({ "name": "mode", "value": "présence" }))),
+            "home"
+        );
+        assert_eq!(
+            mode_asked(&with(json!({ "name": "mode", "value": "absence" }))),
+            "away"
+        );
+        assert_eq!(mode_asked(&json!({})), "night", "none said: night");
     }
 
     #[test]
