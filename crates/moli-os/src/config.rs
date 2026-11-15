@@ -83,6 +83,11 @@ pub struct Config {
 pub struct AlexaSkillConfig {
     /// `amzn1.ask.skill.…`
     pub skill_id: String,
+    /// The point « off » is written to when the voice code is right (the
+    /// alarm's `mode`). Absent: no disarming by voice. The voice code:
+    /// `moli-os secrets set alexa_skill voice_code`, never the house's.
+    #[serde(default)]
+    pub disarm: Option<String>,
 }
 
 /// Where and when agents need a human's approval. Edited by humans only:
