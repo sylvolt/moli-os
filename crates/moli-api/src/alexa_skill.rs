@@ -127,10 +127,12 @@ pub(crate) fn heard_code(slot: &str) -> Option<String> {
     (!others && (4..=8).contains(&digits.len())).then_some(digits)
 }
 
-/// The same code, compared on their digests (no early exit on the text).
+/// The same code, compared on the digests of their digits (no early exit on
+/// the text; « 20 15 » kept is « 2015 » heard).
 pub(crate) fn same_code(heard: &str, kept: &str) -> bool {
-    let d = |s: &str| ring::digest::digest(&ring::digest::SHA256, s.trim().as_bytes());
-    d(heard).as_ref() == d(kept).as_ref()
+    let digits = |s: &str| s.chars().filter(char::is_ascii_digit).collect::<String>();
+    let d = |s: &str| ring::digest::digest(&ring::digest::SHA256, digits(s).as_bytes());
+    !digits(kept).is_empty() && d(heard).as_ref() == d(kept).as_ref()
 }
 
 /// The certificate URL is Amazon's, and only Amazon's.
@@ -549,12 +551,20 @@ async fn disarm(hub: &moli_runtime::Hub, skill: &AlexaSkill, request: &Json) -> 
             minutes = minutes
         ));
     }
-    let heard = question(request)
-        .and_then(|q| heard_code(&q))
-        .unwrap_or_default();
+    let said = question(request).unwrap_or_default();
+    let heard = heard_code(&said).unwrap_or_default();
     if heard.is_empty() || !same_code(&heard, &kept) {
         let locked = lock_of(skill).wrong(now);
-        tracing::warn!(locked = locked.is_some(), "alexa skill: wrong voice code");
+        // Never a digit of either code: only their shapes, to tell a code
+        // misheard from a code kept badly.
+        tracing::warn!(
+            locked = locked.is_some(),
+            heard_digits = heard.len(),
+            said_chars = said.chars().count(),
+            kept_digits = kept.chars().filter(char::is_ascii_digit).count(),
+            kept_only_digits = kept.trim().chars().all(|c| c.is_ascii_digit()),
+            "alexa skill: wrong voice code"
+        );
         return say(match locked {
             Some(minutes) => moli_i18n::tr!("serveur.alexa_skill.code_bloque", minutes = minutes),
             None => moli_i18n::tr!("serveur.alexa_skill.code_faux"),
@@ -698,6 +708,8 @@ mod tests {
         assert!(heard_code("123456789").is_none(), "too long");
         assert!(heard_code("douze").is_none());
         assert!(same_code("1234", " 1234\n"));
+        assert!(same_code("1234", "12 34"));
+        assert!(!same_code("", "  "), "no code kept, nothing matches");
         assert!(!same_code("1235", "1234"));
         let mut lock = VoiceLock::default();
         let t0 = Instant::now();
