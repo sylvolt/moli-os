@@ -3,7 +3,8 @@
 # (from the test's own machine, so "household"). The model behind it: docs/SECURITY-MODEL.md.
 #
 # Level:
-#   public  a stranger (Internet, no proof) is let through: sign-in and invitation only.
+#   public  a stranger (Internet, no proof) is let through: sign-in, invitation, and the Alexa skill
+#           (whose route proves Amazon's signature itself).
 #   foyer   a stranger is refused (403); the household's devices may call it.
 #   humain  as foyer, and the household too is refused (403) without a person signed in with the
 #           house's code (some of these also need an owner).
@@ -55,6 +56,7 @@ POST   /api/people/{id}/invite             humain  oui   # owner
 PUT    /api/people/{id}/password           foyer   oui
 PUT    /api/zones                          foyer   oui
 POST   /api/invitation                     public  oui
+POST   /api/alexa/skill                    public  oui   # Amazon's servers: the route checks Amazon's signature for this skill, else 400 (404 without [alexa_skill])
 POST   /api/session/setup                  foyer   non
 GET    /api/machines/{id}                  foyer   non
 POST   /api/machines/{id}/report           foyer   non

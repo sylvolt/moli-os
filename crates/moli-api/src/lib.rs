@@ -15,7 +15,9 @@
 //! person Cloudflare Access let in through the tunnel).
 
 mod access;
+mod alexa_skill;
 mod assets;
+pub use alexa_skill::AlexaSkill;
 mod assistant;
 mod automations;
 mod caller;
@@ -121,6 +123,8 @@ pub struct Options {
     pub home_path: Option<std::path::PathBuf>,
     /// The home's own assistant, when `[assistant]` is configured.
     pub assistant: Option<moli_assistant::Assistant>,
+    /// A private Alexa skill answered by the assistant (`[alexa_skill]`).
+    pub alexa_skill: Option<alexa_skill::AlexaSkill>,
     /// The automations engine.
     pub automations: Option<moli_automation::Automations>,
     /// The Cloudflare Access application in front of the tunnel, whose
@@ -449,6 +453,8 @@ pub fn router(hub: Hub, shutdown: CancellationToken, options: &Options) -> Route
                 .map(std::path::Path::to_path_buf),
         )))
         .layer(Extension(rest::Metered(options.energy.clone())))
+        .route("/api/alexa/skill", post(alexa_skill::skill))
+        .layer(Extension(options.alexa_skill.clone()))
         .layer(Extension(assistant::Moli(options.assistant.clone())))
         .layer(Extension(automations::Autos(options.automations.clone())))
         .layer(Extension(phones::PhonesGate(options.phones.clone())))

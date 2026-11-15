@@ -341,6 +341,33 @@ Un journal `voice spoken` ne prouve pas que le haut-parleur a joué la phrase : 
 aussi émis lorsque le destinataire ferme le flux. La validation physique demande de
 vérifier la lecture sur le boîtier, après les tests de protocole et de format.
 
+## Alexa pose la question (skill privé, `alexa_skill.rs`)
+
+« Alexa, demande à Moli si la porte de l'atelier est fermée » : un skill Alexa **privé** (console
+développeur Amazon, laissé en mode développement : il ne répond qu'aux Echo du compte, sans
+publication) envoie la phrase à `POST /api/alexa/skill` ; l'assistant répond comme à voix haute
+(`spoken`), Alexa lit la réponse (600 caractères au plus, coupée à une fin de phrase) et la session
+reste ouverte pour la suite (« et la batterie ? » : six échanges gardés par Alexa dans la session).
+
+```toml
+[alexa_skill]
+skill_id = "amzn1.ask.skill.…"   # l'id du skill dans la console Amazon (pas un secret)
+```
+
+- **Rien n'est cru avant la preuve d'Amazon** : la chaîne de certificats ne vient que de
+  `https://s3.amazonaws.com/echo.api/…` (chemin normalisé), remonte à une autorité publique, est valide
+  et nomme `echo-api.amazon.com` ; sa clé a signé le corps exact (`Signature-256`, RSA SHA-256) ; la
+  requête a moins de 150 s ; elle est pour ce skill. Sinon `400`, et `404` sans `[alexa_skill]`. La
+  chaîne est gardée une heure.
+- La route est **publique** (les serveurs d'Amazon sont des inconnus) : elle demande une entrée depuis
+  Internet en HTTPS (Cloudflare Tunnel), où seul ce chemin a besoin d'être ouvert.
+- L'assistant agit **en agent, sous la garde** (`asker` « alexa ») : une pièce ou un appareil protégé
+  attend une personne, désarmer l'alarme veut le code ; jamais donné à voix haute.
+- 6,5 s au plus pour répondre (Alexa attend 8 s) : au-delà, « Je cherche encore… ».
+- Le modèle d'interaction (dans la console) : un intent avec un emplacement `AMAZON.SearchQuery`
+  et des phrases porteuses (« si {question} », « est-ce que {question} », « combien {question} »…),
+  plus les intents `AMAZON.StopIntent`, `CancelIntent`, `HelpIntent`.
+
 ## Côté dashboard
 
 Bulle sur toutes les pages (réponse courte, 2 à 4 cartes) et page Moli (l'écran se compose à

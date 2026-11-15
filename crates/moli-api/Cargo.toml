@@ -26,6 +26,10 @@ futures.workspace = true
 http.workspace = true
 mime_guess.workspace = true
 ring.workspace = true
+rustls.workspace = true
+webpki = { package = "rustls-webpki", version = "0.103", default-features = false, features = ["ring", "std"] }
+webpki-roots.workspace = true
+jiff.workspace = true
 rmcp.workspace = true
 rust-embed.workspace = true
 schemars.workspace = true
