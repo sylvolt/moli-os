@@ -157,6 +157,13 @@ pub(crate) fn device(ctx: &DriverCtx, id: &DeviceId, echo: &Echo, thermometer: b
             true,
             None,
         ),
+        point(
+            "sound",
+            &moli_i18n::tr!("pilotes.alexa.son"),
+            Kind::Text,
+            true,
+            None,
+        ),
     ];
     // A group has no volume of its own: its members have.
     if !echo.group {

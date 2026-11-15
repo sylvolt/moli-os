@@ -447,6 +447,34 @@ pub(crate) fn announce(targets: &[&Echo], customer: &str, locale: &str, text: &s
     )
 }
 
+/// One of Amazon's sounds (`amzn_sfx_doorbell_01`, `amzn_sfx_scifi_alarm_01`…).
+pub(crate) fn sound(echo: &Echo, customer: &str, locale: &str, id: &str) -> Json {
+    by(
+        "amzn1.ask.1p.sound",
+        operation(
+            "Alexa.Sound",
+            echo,
+            customer,
+            locale,
+            &json!({ "soundStringId": id }),
+        ),
+    )
+}
+
+/// A sound's id as Amazon names them: lowercase letters, digits and `_`.
+pub(crate) fn sound_id(text: &str) -> anyhow::Result<String> {
+    let id = text.trim();
+    anyhow::ensure!(
+        !id.is_empty()
+            && id.len() <= 80
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_'),
+        "a sound id, like amzn_sfx_doorbell_01"
+    );
+    Ok(id.to_owned())
+}
+
 pub(crate) fn volume(echo: &Echo, customer: &str, locale: &str, value: i64) -> Json {
     by(
         "amzn1.ask.1p.alexadevicecontrols",
@@ -515,6 +543,23 @@ mod tests {
         assert_eq!(p["locale"], "fr-FR");
         assert_eq!(p["searchPhrase"], "du jazz");
         assert_eq!(p["musicProviderId"], "AMAZON_MUSIC");
+    }
+
+    #[test]
+    fn an_amazon_sound_by_its_id() {
+        let node = sound(&echo("G0911"), "C", "fr-FR", "amzn_sfx_doorbell_01");
+        assert_eq!(node["type"], "Alexa.Sound");
+        assert_eq!(node["skillId"], "amzn1.ask.1p.sound");
+        assert_eq!(
+            node["operationPayload"]["soundStringId"],
+            "amzn_sfx_doorbell_01"
+        );
+        assert_eq!(
+            sound_id(" amzn_sfx_scifi_alarm_01 ").unwrap(),
+            "amzn_sfx_scifi_alarm_01"
+        );
+        assert!(sound_id("Bonjour !").is_err());
+        assert!(sound_id("").is_err());
     }
 
     #[test]

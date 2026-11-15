@@ -80,6 +80,7 @@
   "pilotes.alexa.dire": "Dire une phrase",
   "pilotes.alexa.annoncer": "Faire une annonce",
   "pilotes.alexa.commande": "Commande Alexa (comme si on lui parlait)",
+  "pilotes.alexa.son": "Son Amazon",
   "pilotes.alexa.groupe": "Groupe multi-pièces",
   "pilotes.bambu.certificat_change": "le certificat de l'imprimante a changé : si c'est normal, `moli-os secrets forget {instance} {key}` puis redémarrer",
   "pilotes.bambu.ordre_inconnu": "{order} n'est pas un ordre d'impression",
