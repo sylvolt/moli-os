@@ -364,9 +364,10 @@ skill_id = "amzn1.ask.skill.…"   # l'id du skill dans la console Amazon (pas u
 - L'assistant agit **en agent, sous la garde** (`asker` « alexa ») : une pièce ou un appareil protégé
   attend une personne, désarmer l'alarme veut le code ; jamais donné à voix haute.
 - 6,5 s au plus pour répondre (Alexa attend 8 s) : au-delà, « Je cherche encore… ».
-- Le modèle d'interaction (dans la console) : un intent avec un emplacement `AMAZON.SearchQuery`
-  et des phrases porteuses (« si {question} », « est-ce que {question} », « combien {question} »…),
-  plus les intents `AMAZON.StopIntent`, `CancelIntent`, `HelpIntent`.
+- Le modèle d'interaction (dans la console) : Alexa ne met dans l'emplacement libre
+  (`AMAZON.SearchQuery`) que les mots qui suivent la phrase porteuse ; d'où **un intent par mot
+  d'entrée**, nommé `Q_<mots>` (`Q_combien` : « combien {question} », `Q_est_ce_que`, `Q_mets`…),
+  que Moli remet devant la question. Plus `AMAZON.StopIntent`, `CancelIntent`, `HelpIntent`.
 
 ## Côté dashboard
 
