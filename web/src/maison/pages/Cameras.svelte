@@ -6,6 +6,7 @@
   import LiveVideo from '../ui/LiveVideo.svelte';
   import CameraReview from '../ui/CameraReview.svelte';
   import SecurityPanel from '../ui/SecurityPanel.svelte';
+  import RecentEvents from '../ui/RecentEvents.svelte';
 
   // The layout's cameras first (their names, pace, battery), then any other.
   const cameras = $derived.by(() => {
@@ -18,7 +19,16 @@
   });
 
   let open = $state(null);
+  let startWith = $state(null); // an event to play as the viewer opens
   const current = $derived(cameras.find((c) => c.id === open));
+
+  // Cameras whose NVR tells their past: their newest events take the place
+  // of the security card (the doors stay on the home page).
+  const reviewed = $derived(cameras.filter((c) => hub.devices[c.id]?.review));
+  function openAt(id, item = null) {
+    startWith = item;
+    open = id;
+  }
 
   // What the camera saw today, from the history (rising edges only).
   const KINDS = [
@@ -74,12 +84,16 @@
     <p class="page-sub">{t('salon.cameras.sous_titre')}</p>
   </header>
 
-  <SecurityPanel />
+  {#if reviewed.length}
+    <RecentEvents cameras={reviewed} onopen={openAt} />
+  {:else}
+    <SecurityPanel />
+  {/if}
 
   <div class="wall">
     {#each cameras as cam (cam.id)}
       <div class="slot">
-        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} onopen={(id) => (open = id)} />
+        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} onopen={(id) => openAt(id)} />
         {#if cam.locked}<span class="chip cool lock"><Icon name="lock" size={14} />{t('salon.cameras.protegee')}</span>{/if}
       </div>
     {:else}
@@ -99,7 +113,7 @@
       {#key current.id}
         {#if hub.devices[current.id]?.review}
           <!-- Its past from the NVR: frieze, events, recordings, zones. -->
-          <CameraReview id={current.id} name={current.name} live={hub.devices[current.id]?.live && !current.locked} battery={current.battery} />
+          <CameraReview id={current.id} name={current.name} start={startWith} live={hub.devices[current.id]?.live && !current.locked} battery={current.battery} />
         {:else if hub.devices[current.id]?.live && !current.locked}
           <!-- Live video, played by this browser straight from the camera. -->
           <div class="live-slot"><LiveVideo id={current.id} /></div>

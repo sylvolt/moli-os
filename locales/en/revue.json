@@ -34,5 +34,9 @@
   "revue.label.bird": "Bird",
   "revue.label.package": "Package",
   "revue.label.license_plate": "Licence plate",
-  "revue.label.face": "Face"
+  "revue.label.face": "Face",
+  "revue.derniers": "Latest events",
+  "revue.depuis": "Last {n} hours",
+  "revue.rien_24h": "Nothing reported in 24 h.",
+  "revue.revoir_camera": "Watch {camera} at {heure} again"
 }
