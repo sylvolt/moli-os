@@ -7,10 +7,7 @@
   "borne.courant_actuel": "Courant",
   "borne.session": "Session",
   "borne.mode_titre": "Mode",
-  "borne.aide_auto": "En mode auto, la borne charge sur le surplus solaire : le courant et la marche suivent le soleil.",
-  "borne.charge_autorisee": "Charge",
-  "borne.autoriser": "Autoriser",
-  "borne.arreter": "Arrêter",
+  "borne.aide_auto": "Piloté par l'excédent solaire en mode auto",
   "borne.confirmer_arret": "Arrêter la charge ?",
   "borne.courant_consigne": "Courant de charge",
   "borne.total": "{kwh} kWh délivrés depuis la mise en service",
@@ -40,5 +37,10 @@
   "borne.etat.residual_current": "Courant de fuite",
   "borne.etat.undervoltage": "Sous-tension",
   "borne.etat.overvoltage": "Surtension",
-  "borne.etat.overheating": "Surchauffe"
+  "borne.etat.overheating": "Surchauffe",
+  "borne.consigne": "Consigne",
+  "borne.statut": "Statut borne",
+  "borne.arreter_charge": "Arrêter la charge",
+  "borne.demarrer_charge": "Démarrer la charge",
+  "borne.jauge": "Puissance {kw} kW sur {max} kW"
 }
