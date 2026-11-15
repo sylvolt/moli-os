@@ -109,6 +109,10 @@ pub enum ApprovalError {
     Command(CommandError),
 }
 
+/// The point that connects a cloud account (Alexa, Engie…): the address of
+/// the provider's last sign-in page.
+const SIGN_IN: &str = "sign_in";
+
 /// How long a held order waits for a human.
 const APPROVAL_TTL_MS: u64 = 10 * 60 * 1000;
 /// Orders waiting for a human, at most: a flood of requests must not bury
@@ -1749,8 +1753,9 @@ impl Hub {
     async fn send(&self, prepared: Prepared) -> Result<(), CommandError> {
         // Every order ends here, approved ones too: a mirror stops them all,
         // but those that change nothing outside Moli (it runs them in the
-        // shadow of the real house).
-        if self.0.opts.mirror && !prepared.inside {
+        // shadow of the real house), and connecting an account (`sign_in`:
+        // Moli signs in to a cloud, no device of the house moves).
+        if self.0.opts.mirror && !prepared.inside && &*prepared.key != SIGN_IN {
             return Err(CommandError::Mirror);
         }
         let Prepared {
