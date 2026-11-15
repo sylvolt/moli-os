@@ -571,13 +571,16 @@ async fn disarm(hub: &moli_runtime::Hub, skill: &AlexaSkill, request: &Json) -> 
                 "serveur.alexa_skill.code_bloque",
                 minutes = minutes
             )),
-            None => speech_keeping(
-                &moli_i18n::tr!(
-                    "serveur.alexa_skill.code_faux_encore",
-                    essais = VOICE_TRIES - lock_of(skill).failures
-                ),
-                &json!({ "disarm": true }),
-            ),
+            None => {
+                // Said aloud: the right word, never « essai(s) ».
+                let left = VOICE_TRIES - lock_of(skill).failures;
+                let text = if left == 1 {
+                    moli_i18n::tr!("serveur.alexa_skill.code_faux_dernier")
+                } else {
+                    moli_i18n::tr!("serveur.alexa_skill.code_faux_encore", essais = left)
+                };
+                speech_keeping(&text, &json!({ "disarm": true }))
+            }
         };
     }
     lock_of(skill).right();
