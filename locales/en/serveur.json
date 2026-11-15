@@ -8,7 +8,7 @@
   "serveur.alexa_skill.mode_night": "Night",
   "serveur.alexa_skill.acteur": "Alexa (voice code)",
   "serveur.alexa_skill.code_bloque": "Voice code locked for {minutes} minutes after several mistakes.",
-  "serveur.alexa_skill.code_faux": "Wrong code.",
+  "serveur.alexa_skill.code_faux_encore": "Wrong code. {essais} more try(s). What is the voice code?",
   "serveur.alexa_skill.desarmee": "Alarm disarmed.",
   "serveur.alexa_skill.desarmement_echoue": "I could not disarm: {raison}",
   "serveur.alexa_skill.pas_de_code_vocal": "No voice code is set. Disarm from the screen, with the code.",

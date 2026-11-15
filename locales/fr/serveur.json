@@ -8,7 +8,7 @@
   "serveur.alexa_skill.mode_night": "Nuit",
   "serveur.alexa_skill.acteur": "Alexa (code vocal)",
   "serveur.alexa_skill.code_bloque": "Code vocal bloqué pour {minutes} minutes après plusieurs erreurs.",
-  "serveur.alexa_skill.code_faux": "Code incorrect.",
+  "serveur.alexa_skill.code_faux_encore": "Code incorrect. Encore {essais} essai(s). Quel est le code vocal ?",
   "serveur.alexa_skill.desarmee": "Alarme désarmée.",
   "serveur.alexa_skill.desarmement_echoue": "Je n’ai pas pu désarmer : {raison}",
   "serveur.alexa_skill.pas_de_code_vocal": "Aucun code vocal n’est enregistré. Désarme depuis l’écran, avec le code.",

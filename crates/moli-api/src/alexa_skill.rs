@@ -565,10 +565,20 @@ async fn disarm(hub: &moli_runtime::Hub, skill: &AlexaSkill, request: &Json) -> 
             kept_only_digits = kept.trim().chars().all(|c| c.is_ascii_digit()),
             "alexa skill: wrong voice code"
         );
-        return say(match locked {
-            Some(minutes) => moli_i18n::tr!("serveur.alexa_skill.code_bloque", minutes = minutes),
-            None => moli_i18n::tr!("serveur.alexa_skill.code_faux"),
-        });
+        // Asked again in the same breath, until the lock.
+        return match locked {
+            Some(minutes) => say(moli_i18n::tr!(
+                "serveur.alexa_skill.code_bloque",
+                minutes = minutes
+            )),
+            None => speech_keeping(
+                &moli_i18n::tr!(
+                    "serveur.alexa_skill.code_faux_encore",
+                    essais = VOICE_TRIES - lock_of(skill).failures
+                ),
+                &json!({ "disarm": true }),
+            ),
+        };
     }
     lock_of(skill).right();
     let sent = hub
