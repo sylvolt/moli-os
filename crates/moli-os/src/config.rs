@@ -96,6 +96,10 @@ pub struct GuardConfig {
     /// order (agents, scripts, the CLI) waits for one.
     #[serde(default)]
     pub dashboard: moli_runtime::guard::Dashboard,
+    /// Orders that want the code each time, even from an open session:
+    /// `[[guard.code_each_time]] point = "alarme:maison/mode", values = ["off"]`.
+    #[serde(default)]
+    pub code_each_time: Vec<moli_runtime::guard::CodeEachTime>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -135,6 +139,7 @@ impl GuardConfig {
             quiet_hours,
             protect_unassigned: self.protect_unassigned,
             dashboard: self.dashboard,
+            code_each_time: self.code_each_time.clone(),
         })
     }
 }
