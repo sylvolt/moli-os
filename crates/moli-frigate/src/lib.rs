@@ -242,6 +242,72 @@ fn camera_device(ctx: &DriverCtx, camera: &str) -> Device {
     }
 }
 
+/// A zone's device id: `zone-<name>` (a dash, as the server's: never a
+/// camera's name).
+fn zone_id(zone: &str) -> String {
+    format!("zone-{zone}")
+}
+
+/// A zone drawn on a camera, as a device: how many people, cars… stand in
+/// it now (Frigate's counts for the zone). A sensor for the alarm.
+fn zone_device(ctx: &DriverCtx, zone: &str, camera: &str) -> Device {
+    let points = OBJECTS
+        .iter()
+        .map(|(key, label)| {
+            let mut p = spec(
+                key,
+                &moli_i18n::tr(label),
+                Kind::Numeric {
+                    min: Some(0.0),
+                    max: None,
+                    step: Some(1.0),
+                },
+                false,
+            );
+            p.semantic = Semantic::Occupancy;
+            p
+        })
+        .collect();
+    Device {
+        id: ctx.device_id(&zone_id(zone)),
+        instance: ctx.instance().clone(),
+        native_name: moli_i18n::tr!(
+            "pilotes.frigate.zone_nom",
+            zone = zone.replace('_', " "),
+            camera = camera.replace('_', " ")
+        )
+        .into(),
+        manufacturer: Some("Frigate".into()),
+        model: Some(moli_i18n::tr!("pilotes.frigate.zone").into()),
+        description: None,
+        native_room: None,
+        members: Vec::new(),
+        points,
+    }
+}
+
+/// The zones of every camera, as devices, when Frigate's API is set
+/// (`review`): zone name → its camera.
+async fn provide_zones(
+    ctx: &DriverCtx,
+    review: Option<&std::sync::Arc<review::Api>>,
+) -> std::collections::BTreeMap<String, String> {
+    let Some(api) = review else {
+        return std::collections::BTreeMap::new();
+    };
+    let zones = match api.zone_names().await {
+        Ok(z) => z,
+        Err(e) => {
+            tracing::warn!(instance = %ctx.instance(), error = %e, "frigate: zones not read");
+            return std::collections::BTreeMap::new();
+        }
+    };
+    for (zone, camera) in &zones {
+        ctx.upsert_device(zone_device(ctx, zone, camera));
+    }
+    zones
+}
+
 /// The server itself, as a device (its native id cannot be a camera's:
 /// Frigate camera names are lowercase words, this one has a dash).
 const SERVER: &str = "frigate-server";
@@ -430,6 +496,7 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
         .as_deref()
         .and_then(moli_net::upnp::Location::parse);
     let review = review_api(config, ctx).await;
+    let zones = provide_zones(ctx, review.as_ref()).await;
     let mut cameras: BTreeSet<String> = BTreeSet::new();
     let mut available = true;
     let mut server = false;
@@ -464,8 +531,8 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                     let payload = String::from_utf8_lossy(&publish.payload);
                     if rest == "available" {
                         available = payload == "online";
-                        for camera in &cameras {
-                            ctx.set_availability(&ctx.device_id(camera), available);
+                        for name in cameras.iter().chain(zones.keys().map(|z| zone_id(z)).collect::<Vec<_>>().iter()) {
+                            ctx.set_availability(&ctx.device_id(name), available);
                         }
                         if server {
                             ctx.set_state(&ctx.device_id(SERVER), "running", Value::Bool(available));
@@ -485,6 +552,10 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                         continue;
                     }
                     let Some(Update::Value(camera, key, value)) = parse(rest, &payload) else { continue };
+                    if zones.contains_key(camera) {
+                        ctx.set_state(&ctx.device_id(&zone_id(camera)), key, value);
+                        continue;
+                    }
                     if !cameras.contains(camera) {
                         if !names_a_camera(key) {
                             continue; // a zone, or not a camera yet
