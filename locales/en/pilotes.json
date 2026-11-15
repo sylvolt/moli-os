@@ -80,6 +80,7 @@
   "pilotes.alexa.dire": "Say a sentence",
   "pilotes.alexa.annoncer": "Make an announcement",
   "pilotes.alexa.commande": "Alexa command (as if spoken to it)",
+  "pilotes.alexa.son": "Amazon sound",
   "pilotes.alexa.groupe": "Multi-room group",
   "pilotes.bambu.certificat_change": "the printer’s certificate changed: if that’s expected, `moli-os secrets forget {instance} {key}` and restart",
   "pilotes.bambu.ordre_inconnu": "{order} isn’t a print command",

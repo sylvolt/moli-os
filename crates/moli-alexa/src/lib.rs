@@ -525,6 +525,10 @@ async fn send(home: &Home, command: &CommandRequest) -> Result<(), Failure> {
             s.run(&api::announce(&targets, customer, locale, words))
                 .await
         }
+        ("sound", Value::Text(id)) => {
+            let id = &api::sound_id(id).map_err(Failure::Other)?;
+            s.run(&each(&|m| api::sound(m, customer, locale, id))).await
+        }
         ("command", v) => {
             let words = &text(v)?;
             s.run(&each(&|m| api::text_command(m, customer, locale, words)))
