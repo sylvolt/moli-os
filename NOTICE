@@ -33,3 +33,9 @@ at commit 5f31858570e14be4f58e6cc58b7a448000556449, used by
 crates/moli-overkiz/src/cloud/protocol.rs.
 Copyright (c) 2020 Mick Vleeshouwer. Licensed under the MIT License;
 see licenses/pyoverkiz-MIT.txt.
+
+This product includes data derived from victron_mqtt
+(https://github.com/tomer-w/victron_mqtt): the Venus OS MQTT topic paths,
+units and state codes in crates/moli-victron/src/lib.rs.
+Copyright (c) 2025-2026 Tomer-w. Licensed under the Apache License,
+Version 2.0 (the same licence as Moli OS).

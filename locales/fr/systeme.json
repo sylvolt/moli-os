@@ -215,6 +215,8 @@
   "systeme.pilotes.philips.desc": "Les télés Philips (Android TV) : allumage, touches, applis, Ambilight.",
   "systeme.pilotes.frigate.nom": "Frigate",
   "systeme.pilotes.frigate.desc": "Les caméras analysées par Frigate : personnes, voitures, animaux.",
+  "systeme.pilotes.victron.nom": "Victron (Cerbo GX)",
+  "systeme.pilotes.victron.desc": "Batterie, panneaux, onduleur et borne Victron, par le MQTT du GX.",
   "systeme.pilotes.bambu.nom": "Imprimante 3D",
   "systeme.pilotes.bambu.desc": "Les imprimantes Bambu Lab, en local.",
   "systeme.pilotes.tapo.nom": "Tapo",
