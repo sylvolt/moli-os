@@ -1892,6 +1892,7 @@ name = "moli-frigate"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "futures",
  "http",
  "http-body-util",
  "moli-core",
@@ -2402,6 +2403,7 @@ name = "moli-runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "futures",
  "jiff",
  "moli-core",
