@@ -1155,8 +1155,8 @@ Sans la seconde règle, la prévision suffit à relever le store ; avec, seule l
 
 - **Couvre** : les appareils ESPHome. Les satellites vocaux (Home Assistant Voice Preview
   Edition, ou un ESP32-S3 monté à la main) : le mot de réveil, la conversation, la voix. Les
-  autres (prise mesurée, lecteur de compteur P1…) : leurs capteurs, capteurs binaires, capteurs
-  texte et interrupteurs.
+  autres (prise mesurée, lecteur de compteur P1, pompe à chaleur…) : leurs capteurs, capteurs
+  binaires, capteurs texte, interrupteurs, nombres (consignes) et listes de choix (modes).
 - **Protocole** : l'API native d'ESPHome, TCP **6053**, chiffrée par **Noise** — écrite depuis la
   spécification, **sans bibliothèque ESPHome** (`noise.rs`, `frame.rs`, `api.rs` ; identifiants et
   numéros de champs de `api.proto`, ESPHome 2026.3, version d'API 1.14). Une connexion tenue
@@ -1172,9 +1172,12 @@ Sans la seconde règle, la prévision suffit à relever le store ; avec, seule l
   l'appareil), `wake_word`, `say` (texte, 500 caractères). Tout autre appareil : un point par
   entité, de clé l'`object_id` de l'entité (sinon son nom), réduit en clé : minuscules, accents
   repliés, tout autre caractère (`-`, espace, `__`…) devient un seul `_`. Deux types qui
-  partagent une clé : le premier de capteur, capteur binaire, capteur texte, interrupteur la
-  garde, les autres prennent leur type en suffixe (`<clé>_switch`), quel que soit l'ordre de la
-  liste. Les interrupteurs s'écrivent (`OnOff`), le reste se lit. Les réglages de l'appareil
+  partagent une clé : le premier de capteur, capteur binaire, capteur texte, interrupteur,
+  nombre, liste de choix la garde, les autres prennent leur type en suffixe (`<clé>_switch`,
+  `_number`, `_select`), quel que soit l'ordre de la liste. Les interrupteurs s'écrivent
+  (`OnOff`) ; les nombres (`number` : bornes et pas de l'appareil, unité) et les listes de choix
+  (`select` : une énumération des options de l'appareil ; une liste vide n'a pas de point)
+  s'écrivent aussi, en réglages (`Config`) ; le reste se lit. Les réglages de l'appareil
   (catégorie `config` : `restart`, `safe_mode`, `factory_reset`…), ses diagnostics (catégorie
   `diagnostic` : Wi-Fi, uptime, adresse…) et les entités cachées par défaut sont laissés de
   côté ; au-delà de 500 entités, la connexion est refusée. Une valeur arrive telle quelle (les

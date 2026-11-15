@@ -13,5 +13,5 @@
 
 Un appareil qui n'est pas un satellite (prise, lecteur P1…) et qui était déjà installé change de
 points à la mise à jour : `state`, `volume`, `muted`… laissent la place à un point par entité
-(capteurs, capteurs binaires, capteurs texte, interrupteurs). Un automatisme ou une carte qui
+(capteurs, capteurs binaires, capteurs texte, interrupteurs, nombres, listes de choix). Un automatisme ou une carte qui
 visait les anciens points est à refaire sur les nouveaux.

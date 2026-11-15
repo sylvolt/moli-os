@@ -26,6 +26,12 @@ pub const TEXT_SENSOR_STATE: u16 = 27;
 pub const SUBSCRIBE_LOGS: u16 = 28;
 pub const LOG: u16 = 29;
 pub const SWITCH_COMMAND: u16 = 33;
+pub const LIST_NUMBER: u16 = 49;
+pub const NUMBER_STATE: u16 = 50;
+pub const NUMBER_COMMAND: u16 = 51;
+pub const LIST_SELECT: u16 = 52;
+pub const SELECT_STATE: u16 = 53;
+pub const SELECT_COMMAND: u16 = 54;
 pub const LIST_MEDIA_PLAYER: u16 = 63;
 pub const MEDIA_PLAYER_STATE: u16 = 64;
 pub const MEDIA_PLAYER_COMMAND: u16 = 65;
@@ -137,7 +143,8 @@ pub const CATEGORY_CONFIG: u64 = 1;
 /// address…), not what it measures or drives.
 pub const CATEGORY_DIAGNOSTIC: u64 = 2;
 
-/// A sensor, binary sensor, text sensor or switch as the device lists it.
+/// A sensor, binary sensor, text sensor, switch, number or select as the
+/// device lists it.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Listed {
     pub object_id: String,
@@ -150,6 +157,12 @@ pub struct Listed {
     pub device_class: String,
     pub category: u64,
     pub disabled_by_default: bool,
+    /// Numbers only: the range the device accepts and its step.
+    pub min: Option<f32>,
+    pub max: Option<f32>,
+    pub step: Option<f32>,
+    /// Selects only: the choices, in the device's order.
+    pub options: Vec<String>,
 }
 
 /// Field numbers of a `ListEntities…Response`: object_id 1, key 2 and name 3
@@ -157,43 +170,74 @@ pub struct Listed {
 struct Fields {
     unit: Option<u32>,
     decimals: Option<u32>,
-    device_class: u32,
+    device_class: Option<u32>,
     disabled: u32,
     category: u32,
+    /// Numbers: min, max, step.
+    range: Option<(u32, u32, u32)>,
+    /// Selects: the repeated options.
+    options: Option<u32>,
 }
 
 /// The entity a `ListEntities…Response` of this `kind` describes (sensor,
-/// binary sensor, text sensor or switch; `None` for another kind).
+/// binary sensor, text sensor, switch, number or select; `None` for another
+/// kind).
 #[must_use]
 pub fn listed(kind: u16, payload: &[u8]) -> Option<Listed> {
     let f = match kind {
         LIST_SENSOR => Fields {
             unit: Some(6),
             decimals: Some(7),
-            device_class: 9,
+            device_class: Some(9),
             disabled: 12,
             category: 13,
+            range: None,
+            options: None,
         },
         LIST_BINARY_SENSOR => Fields {
             unit: None,
             decimals: None,
-            device_class: 5,
+            device_class: Some(5),
             disabled: 7,
             category: 9,
+            range: None,
+            options: None,
         },
         LIST_TEXT_SENSOR => Fields {
             unit: None,
             decimals: None,
-            device_class: 8,
+            device_class: Some(8),
             disabled: 6,
             category: 7,
+            range: None,
+            options: None,
         },
         LIST_SWITCH => Fields {
             unit: None,
             decimals: None,
-            device_class: 9,
+            device_class: Some(9),
             disabled: 7,
             category: 8,
+            range: None,
+            options: None,
+        },
+        LIST_NUMBER => Fields {
+            unit: Some(11),
+            decimals: None,
+            device_class: Some(13),
+            disabled: 9,
+            category: 10,
+            range: Some((6, 7, 8)),
+            options: None,
+        },
+        LIST_SELECT => Fields {
+            unit: None,
+            decimals: None,
+            device_class: None,
+            disabled: 7,
+            category: 8,
+            range: None,
+            options: Some(6),
         },
         _ => return None,
     };
@@ -207,9 +251,17 @@ pub fn listed(kind: u16, payload: &[u8]) -> Option<Listed> {
         // int32: a negative number arrives as a 64-bit two's complement.
         #[allow(clippy::cast_possible_wrap)]
         decimals: f.decimals.map_or(-1, |n| m.uint(n).map_or(0, |d| d as i64)),
-        device_class: text(f.device_class),
+        device_class: f.device_class.map(text).unwrap_or_default(),
         category: m.uint(f.category).unwrap_or(0),
         disabled_by_default: m.bool(f.disabled),
+        min: f.range.and_then(|(n, _, _)| m.float(n)),
+        max: f.range.and_then(|(_, n, _)| m.float(n)),
+        step: f.range.and_then(|(_, _, n)| m.float(n)),
+        options: f.options.map_or_else(Vec::new, |n| {
+            m.all_bytes(n)
+                .filter_map(|b| std::str::from_utf8(b).ok().map(str::to_owned))
+                .collect()
+        }),
     })
 }
 
@@ -301,6 +353,35 @@ pub fn switch_state(payload: &[u8]) -> Option<(u32, bool)> {
 #[must_use]
 pub fn set_switch(key: u32, on: bool) -> Vec<u8> {
     Writer::new().fixed32(1, key).bool(2, on).finish()
+}
+
+/// `NumberStateResponse`: which number, and its value (`None`: none yet).
+#[must_use]
+pub fn number_state(payload: &[u8]) -> Option<(u32, Option<f32>)> {
+    let m = parse(payload)?;
+    let value = m.float(2).unwrap_or(0.0);
+    let missing = m.bool(3) || !value.is_finite();
+    Some((m.fixed32(1)?, (!missing).then_some(value)))
+}
+
+/// `NumberCommandRequest`: set a number.
+#[must_use]
+pub fn set_number(key: u32, value: f32) -> Vec<u8> {
+    Writer::new().fixed32(1, key).float(2, value).finish()
+}
+
+/// `SelectStateResponse`: which select, and its choice (`None`: none yet).
+#[must_use]
+pub fn select_state(payload: &[u8]) -> Option<(u32, Option<String>)> {
+    let m = parse(payload)?;
+    let choice = m.str(2).unwrap_or_default().to_owned();
+    Some((m.fixed32(1)?, (!m.bool(3)).then_some(choice)))
+}
+
+/// `SelectCommandRequest`: choose an option.
+#[must_use]
+pub fn set_select(key: u32, choice: &str) -> Vec<u8> {
+    Writer::new().fixed32(1, key).str(2, choice).finish()
 }
 
 /// `EventResponse`: which entity, which event (`double_press`…).
@@ -479,6 +560,51 @@ mod tests {
         let set = set_wake_words(&["hey_moli", "dis_moli"]);
         let set = parse(&set).unwrap();
         assert_eq!(set.all_bytes(1).count(), 2);
+    }
+
+    #[test]
+    fn numbers_and_selects_are_listed_read_and_set() {
+        use moli_net::proto::Writer;
+        let number = Writer::new()
+            .str(1, "room_temperature_setpoint")
+            .fixed32(2, 9)
+            .str(3, "Room temperature setpoint")
+            .float(6, 10.0)
+            .float(7, 30.0)
+            .float(8, 0.5)
+            .str(11, "°C")
+            .str(13, "temperature")
+            .finish();
+        let n = listed(LIST_NUMBER, &number).unwrap();
+        assert_eq!(
+            (n.key, n.min, n.max, n.step),
+            (9, Some(10.0), Some(30.0), Some(0.5))
+        );
+        assert_eq!(
+            (n.unit.as_str(), n.device_class.as_str()),
+            ("°C", "temperature")
+        );
+        let select = Writer::new()
+            .str(1, "mode")
+            .fixed32(2, 4)
+            .str(3, "Mode")
+            .str(6, "Heating")
+            .str(6, "Cooling")
+            .finish();
+        let l = listed(LIST_SELECT, &select).unwrap();
+        assert_eq!(l.options, vec!["Heating".to_owned(), "Cooling".to_owned()]);
+        let state = Writer::new().fixed32(1, 9).float(2, 18.5).finish();
+        assert_eq!(number_state(&state), Some((9, Some(18.5))));
+        let missing = Writer::new().fixed32(1, 9).bool(3, true).finish();
+        assert_eq!(number_state(&missing), Some((9, None)));
+        let chosen = Writer::new().fixed32(1, 4).str(2, "Cooling").finish();
+        assert_eq!(select_state(&chosen), Some((4, Some("Cooling".to_owned()))));
+        let set_bytes = set_number(9, 20.0);
+        let set = parse(&set_bytes).unwrap();
+        assert_eq!((set.fixed32(1), set.float(2)), (Some(9), Some(20.0)));
+        let pick_bytes = set_select(4, "Heating");
+        let pick = parse(&pick_bytes).unwrap();
+        assert_eq!(pick.str(2), Some("Heating"));
     }
 
     #[test]
