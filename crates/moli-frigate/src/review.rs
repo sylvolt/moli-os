@@ -96,6 +96,11 @@ impl Api {
         bail!("Frigate: session refused")
     }
 
+    /// Every camera's zones: zone name → its camera.
+    pub async fn zone_names(&self) -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+        Ok(zone_names(&self.json("/api/config").await?))
+    }
+
     /// A picture or a clip, streamed, `Range` passed on.
     async fn media(&self, path: &str, range: Option<&str>) -> anyhow::Result<MediaReply> {
         for attempt in 0..2 {
@@ -287,6 +292,22 @@ pub fn stretches(answer: &Json) -> Vec<Recorded> {
     out
 }
 
+/// Every camera's zones in Frigate's configuration: zone → camera.
+#[must_use]
+pub fn zone_names(config: &Json) -> std::collections::BTreeMap<String, String> {
+    let mut out = std::collections::BTreeMap::new();
+    if let Some(cameras) = config["cameras"].as_object() {
+        for (camera, c) in cameras {
+            if let Some(zones) = c["zones"].as_object() {
+                for zone in zones.keys() {
+                    out.entry(zone.clone()).or_insert_with(|| camera.clone());
+                }
+            }
+        }
+    }
+    out
+}
+
 /// `/api/config` → this camera's zones (relative coordinates, `"x,y,x,y…"`
 /// or a list of numbers).
 #[must_use]
@@ -394,6 +415,10 @@ mod tests {
         assert_eq!(zones[0].points[2], (0.5, 0.9));
         assert_eq!(zones[1].points.len(), 3);
         assert!(zones_of(&config, "jardin").is_empty());
+        let names = zone_names(&config);
+        assert_eq!(names.get("allee").map(String::as_str), Some("entree"));
+        assert_eq!(names.len(), 3);
+        assert!(zone_names(&json!({})).is_empty());
     }
 
     #[test]
