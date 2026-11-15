@@ -110,7 +110,21 @@ Les compteurs cumulés deviennent des **kWh et des euros heure par heure**, gard
   `consumption_w`. L'appareil `energie:maison` gagne `today_production_kwh`,
   `today_export_kwh`, `today_self_consumed_kwh`, `today_self_consumption_rate`,
   `today_self_sufficiency`, `month_production_kwh`, `month_self_consumption_rate` (%).
-  Pas encore : batterie.
+- **Batterie de la maison** : rôles `charge` (index de ce qui entre dans la batterie) et
+  `discharge` (index de ce qui en sort), sans prix, jamais dans `total`. Chaque période donne
+  `battery_charge` et `battery_discharge` ; le bilan solaire en tient compte : `consumption` =
+  acheté + autoconsommé − stocké + rendu (ce que la maison a vraiment utilisé sur la période),
+  `self_sufficiency` = (consommation − acheté) / consommation, `self_consumed` reste production −
+  injection (utilisé ou stocké). « Le reste de la maison » retranche ce qui est stocké et ajoute
+  ce qui est rendu. Sans compteur `charge` ni `discharge`, rien ne change. `[energy.battery]`
+  (optionnel) : `soc` (le point de la charge, en %), `power` (W, positif en charge ; avec
+  `discharge_positive = true`, un point positif en décharge est retourné), `capacity_kwh` (ce
+  que la charge contient en kWh). `/api/energy` ajoute `battery` (charge, puissance signée,
+  kWh contenus) et `flows.battery_w` ; `consumption_w` = réseau + production − batterie.
+  L'appareil `energie:maison` gagne `today_battery_charge_kwh` et `today_battery_discharge_kwh`.
+  Page Énergie : carte « Batterie » (charge, en charge / alimente la maison / au repos, kWh du
+  jour) ; le flux en direct (Accueil, Énergie) montre la batterie sous la maison. Pas encore :
+  piloter la batterie, ni distinguer ce qu'elle a pris au réseau de ce qu'elle a pris au soleil.
 - **Charges pilotées** (`[[energy.load]]`, `crates/moli-energy/src/load.rs`) : un chauffe-eau
   (ou toute charge qui stocke) sur un relais, mis en marche sur le surplus solaire et complété
   en heures creuses. Logique **déterministe** (jamais de modèle dans la boucle), testée, un tour
