@@ -69,7 +69,8 @@
     // Only when something is watched: a house with nothing to watch sees no empty page.
     { path: 'parc', label: 'commun.nav.parc', icon: 'package', shown: () => Object.values(hub.devices).some((d) => !hidden(d.id) && watches(d)) },
   ];
-  const nav = $derived(NAV.filter((item) => !item.shown || item.shown()));
+  // `nav_hidden` in home.json: pages this house does not use.
+  const nav = $derived(NAV.filter((item) => (!item.shown || item.shown()) && !(home.config?.nav_hidden ?? []).includes(item.path)));
 
   let moliOpen = $state(false);
   let prefersDark = $state(false);

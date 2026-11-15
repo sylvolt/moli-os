@@ -61,6 +61,8 @@
   "maison.accueil.son_joue": "sound is playing",
   "maison.accueil.dehors": "Outside",
   "maison.accueil.air": "Air",
+  "maison.accueil.appareils": "Devices",
+  "maison.accueil.temperature": "Temperature",
   "maison.accueil.humidite": "Humidity",
   "maison.accueil.piscine": "Pool",
 

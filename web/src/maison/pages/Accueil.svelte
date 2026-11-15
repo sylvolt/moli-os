@@ -20,6 +20,17 @@
 
   const cfg = $derived(home.config ?? {});
   const out = $derived(cfg.outdoor ?? {});
+  // `outdoor.temperature` : a point (« device/key ») measured outside (a heat
+  // pump's outdoor probe), shown first on the Dehors card.
+  const outTemp = $derived.by(() => {
+    const point = out.temperature;
+    if (typeof point !== 'string' || !point.includes('/')) return null;
+    const i = point.indexOf('/');
+    return { value: value(point.slice(0, i), point.slice(i + 1)) };
+  });
+  // `favorites.switches` : the on/off things worth a button here (plugs, a
+  // gate relay…), `{ id, name, icon, point }`.
+  const switches = $derived(cfg.favorites?.switches ?? []);
   // A robot goes through every room: it belongs to none.
   const robots = $derived(Object.values(hub.devices).filter((d) => deviceKind(d) === 'vacuum' && !hidden(d.id)));
 
@@ -183,6 +194,18 @@
   </section>
 
   <div class="grid">
+    {#if switches.length}
+      <section class="card switches">
+        <div class="card-head"><h2><Icon name="socket" size={18} />{t('maison.accueil.appareils')}</h2></div>
+        <div class="tiles">
+          {#each switches as s (s.id + (s.point ?? ''))}
+            <LightTile id={s.id} name={s.name} icon={s.icon ?? 'socket'} point={s.point ?? null} />
+          {/each}
+        </div>
+      </section>
+    {/if}
+
+    {#if lights.length || mood}
     <section class="card lights">
       <div class="card-head">
         <h2><Icon name="light" size={18} />{t('maison.accueil.lumieres')} <span class="count">{litCount ? t('maison.accueil.allumees', { count: litCount }) : t('maison.accueil.tout_eteint')}</span></h2>
@@ -208,6 +231,7 @@
         </div>
       {/if}
     </section>
+    {/if}
 
     <div class="side">
       <EnergyCard />
@@ -244,6 +268,7 @@
       </section>
     {/if}
 
+    {#if cfg.salon?.tv}
     <a class="card remote" href="#/salon">
       <span class="tv-object" aria-hidden="true">
         <span class="screen" class:lit={tvOn}></span>
@@ -255,12 +280,18 @@
       </span>
       <span class="go"><Icon name="arrow-top-right" size={20} /></span>
     </a>
+    {/if}
 
     <a class="card outside" href="#/dehors">
       <div class="card-head"><h2><Icon name="flower-outline" size={18} />{t('maison.accueil.dehors')}</h2><span class="more" aria-hidden="true"><Icon name="arrow-top-right" size={18} /></span></div>
       <div class="facts">
-        <div><small>{t('maison.accueil.air')}</small><b>{aqiWord}</b></div>
-        <div><small>UV</small><b class="num">{num(value(out.air, 'uv_index'), 0)}</b></div>
+        {#if outTemp}
+          <div><small>{t('maison.accueil.temperature')}</small><b class="num">{outTemp.value != null ? `${num(outTemp.value, 1)}°` : '—'}</b></div>
+        {/if}
+        {#if out.air}
+          <div><small>{t('maison.accueil.air')}</small><b>{aqiWord}</b></div>
+          <div><small>UV</small><b class="num">{num(value(out.air, 'uv_index'), 0)}</b></div>
+        {/if}
         <div><small>{t('maison.accueil.humidite')}</small><b class="num">{value(out.weather, 'humidity') != null ? `${num(value(out.weather, 'humidity'))} %` : '—'}</b></div>
         {#if out.pool}
           <div><small>{t('maison.accueil.piscine')}</small><b class="num">{value(out.pool, 'temperature') != null ? `${num(value(out.pool, 'temperature'), 1)}°` : '—'}</b></div>
@@ -339,8 +370,13 @@
     align-items: start;
   }
 
-  .lights {
+  .lights,
+  .switches {
     grid-column: span 8;
+  }
+
+  .switches .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
   .side {
@@ -562,6 +598,7 @@
 
   @media (max-width: 1180px) {
     .lights,
+    .switches,
     .climate {
       grid-column: span 12;
     }
