@@ -59,7 +59,8 @@ Une automatisation = un **graphe** de nœuds reliés (comme n8n), stocké dans
 | | `write` | `prompt` → texte `{{texte}}` pour la suite (IA, jamais de contrôle) |
 
 Messages : `{{<appareil>/<clé>}}` = valeur actuelle (avec unité), `{{texte}}` = dernier texte
-de Moli, `{{heure}}`.
+de Moli, `{{heure}}`. Le texte écrit par un `set` les prend aussi (une annonce sur une seule
+enceinte : `set` sur son point `announce`).
 
 Modes (comme HA) : `restart` (défaut : minuteries « mouvement → lumière 5 min »), `single`,
 `queued`.

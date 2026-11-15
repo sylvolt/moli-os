@@ -263,7 +263,15 @@ async fn step(
                 (StepStatus::No, None, Some("no"))
             }
         }
-        Step::Set { point, value } => act(autos, a, point, Value::from_json(value), dry).await,
+        Step::Set { point, value } => {
+            // Words written to a point (an announcement on one speaker)
+            // take the same `{{…}}` as a message.
+            let value = match value {
+                Json::String(s) if s.contains("{{") => Value::Text(render(autos, s, ctx).into()),
+                other => Value::from_json(other),
+            };
+            act(autos, a, point, value, dry).await
+        }
         Step::Toggle { point } => {
             let pid = PointId::from(point.as_str());
             let next = match hub.current_state(&pid).map(|s| s.value) {
