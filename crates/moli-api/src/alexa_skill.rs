@@ -182,15 +182,25 @@ pub(crate) fn for_this_skill(request: &Json, skill_id: &str, now_s: i64) -> Resu
     Ok(())
 }
 
-/// What the person asked, from the intent's free slot.
+/// What the person asked, from the intent's free slot. Alexa keeps the
+/// words in the slot only: the word that led them (« mets », « combien »)
+/// is the intent's own, named `Q_<words>` (`Q_est_ce_que`), and put back.
 pub(crate) fn question(request: &Json) -> Option<String> {
-    let slots = request["request"]["intent"]["slots"].as_object()?;
-    slots
+    let intent = &request["request"]["intent"];
+    let slots = intent["slots"].as_object()?;
+    let asked = slots
         .values()
         .filter_map(|s| s["value"].as_str())
         .map(str::trim)
-        .find(|v| !v.is_empty())
-        .map(str::to_owned)
+        .find(|v| !v.is_empty())?;
+    let lead = intent["name"]
+        .as_str()
+        .and_then(|n| n.strip_prefix("Q_"))
+        .map(|w| w.replace('_', " "));
+    Some(match lead {
+        Some(lead) if !lead.is_empty() => format!("{lead} {asked}"),
+        _ => asked.to_owned(),
+    })
 }
 
 /// Words Alexa can read: no markdown, not too long.
@@ -476,6 +486,15 @@ mod tests {
         let r = json!({ "request": { "intent": { "name": "Question", "slots": {
             "question": { "name": "question", "value": " la porte est fermée " } } } } });
         assert_eq!(question(&r).as_deref(), Some("la porte est fermée"));
+        let r = json!({ "request": { "intent": { "name": "Q_est_ce_que", "slots": {
+            "question": { "name": "question", "value": "la porte est fermée" } } } } });
+        assert_eq!(
+            question(&r).as_deref(),
+            Some("est ce que la porte est fermée")
+        );
+        let r = json!({ "request": { "intent": { "name": "Q_mets", "slots": {
+            "question": { "name": "question" } } } } });
+        assert!(question(&r).is_none(), "nothing heard");
         assert_eq!(
             spoken("**Oui**, la porte\n est _fermée_."),
             "Oui, la porte est fermée."
