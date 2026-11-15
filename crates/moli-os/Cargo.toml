@@ -51,6 +51,7 @@ moli-solarman.workspace = true
 moli-vicare.workspace = true
 moli-igd.workspace = true
 moli-ipp.workspace = true
+moli-alarm.workspace = true
 moli-helpers.workspace = true
 moli-demo.workspace = true
 jiff.workspace = true
