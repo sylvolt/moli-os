@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayOf, at, timeAt, bars, playable, windowFrom, windowOf, listed, labelsOf, hours, outline, readable, WINDOW } from './review.js';
+import { dayOf, at, timeAt, bars, playable, windowFrom, windowOf, listed, labelsOf, hours, outline, readable, latest, WINDOW } from './review.js';
 
 test('a day, local, from midnight to midnight', () => {
   const noon = new Date(2026, 10, 15, 12, 30).getTime() / 1000;
@@ -87,4 +87,16 @@ test('zones drawn on the picture, names read', () => {
   };
   assert.equal(outline(zone, 1600, 900), '0.0,900.0 800.0,225.0 1600.0,900.0');
   assert.equal(readable('cour_interieure'), 'cour interieure');
+});
+
+test('the newest items of every camera, mixed', () => {
+  const byCamera = [
+    { camera: 'a', items: [{ id: 1, start: 10 }, { id: 2, start: 30 }] },
+    { camera: 'b', items: [{ id: 3, start: 20 }] },
+  ];
+  assert.deepEqual(
+    latest(byCamera).map((x) => `${x.camera}${x.item.id}`),
+    ['a2', 'b3', 'a1'],
+  );
+  assert.equal(latest(byCamera, 2).length, 2);
 });

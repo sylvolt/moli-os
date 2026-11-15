@@ -117,3 +117,10 @@ export function outline(zone, w, h) {
 export function readable(name) {
   return name.replaceAll('_', ' ');
 }
+
+/** The newest items of several cameras, mixed: [{ camera, item }]. */
+export function latest(byCamera, n = 20) {
+  const out = [];
+  for (const { camera, items } of byCamera) for (const item of items) out.push({ camera, item });
+  return out.sort((a, b) => b.item.start - a.item.start).slice(0, n);
+}

@@ -10,7 +10,7 @@
   /** A camera with its past (its NVR): the picture (live, or what was
    *  recorded at the chosen moment, or an event's photo) with the zones over
    *  it, the frieze of one day, and what it saw that day. */
-  let { id, name, live = false, battery = false } = $props();
+  let { id, name, live = false, battery = false, start = null } = $props();
 
   const base = $derived(`/api/devices/${encodeURIComponent(id)}/review`);
   const nowS = () => Date.now() / 1000;
@@ -146,6 +146,11 @@
 
   onDestroy(() => {
     if (video) video.removeAttribute('src');
+  });
+
+  // Opened on an event (the strip of the newest): it plays at once.
+  $effect(() => {
+    if (start) playItem(start);
   });
 
   // ── The frieze ────────────────────────────────────────────────
