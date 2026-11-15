@@ -17,6 +17,7 @@
   import Energie from './pages/Energie.svelte';
   import Impression from './pages/Impression.svelte';
   import Borne from './pages/Borne.svelte';
+  import Performance from './pages/Performance.svelte';
   import { isEvCharger } from './lib/evcharger.js';
   import Dehors from './pages/Dehors.svelte';
   import Chauffage from './pages/Chauffage.svelte';
@@ -58,6 +59,7 @@
     { path: 'cameras', label: 'commun.nav.cameras', icon: 'cctv' },
     { path: 'parler', label: 'commun.nav.parler', icon: 'talk' },
     { path: 'energie', label: 'commun.nav.energie', icon: 'bolt' },
+    { path: 'performance', label: 'commun.nav.performance', icon: 'chart', shown: () => !!home.config?.energy_perf },
     { path: 'chauffage', label: 'commun.nav.chauffage', icon: 'fire', shown: () => Object.values(hub.devices).some((d) => deviceKind(d) === 'heating') },
     { path: 'impression', label: 'commun.nav.impression', icon: 'printer3d' },
     { path: 'borne', label: 'commun.nav.borne', icon: 'ev-station', shown: () => Object.values(hub.devices).some(isEvCharger) },
@@ -178,6 +180,8 @@
       {#await import('./pages/Solaire.svelte') then { default: Solaire }}<Solaire />{/await}
     {:else if page === 'energie'}
       <Energie />
+    {:else if page === 'performance'}
+      <Performance />
     {:else if page === 'borne'}
       <Borne />
     {:else if page === 'impression'}

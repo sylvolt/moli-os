@@ -363,6 +363,7 @@
   "energie.flux.reseau": "Grid",
   "energie.flux.maison": "Home",
   "energie.flux.batterie": "Battery",
+  "energie.performance.titre": "Energy performance",
   "energie.batterie.titre": "Battery",
   "energie.batterie.charge_pct": "Battery charge",
   "energie.batterie.charge": "Charging · {w}",

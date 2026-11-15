@@ -11,3 +11,5 @@ web/src/maison/ui/PaperPrinterCard.svelte  STUCK = /papier
 web/src/maison/ui/PaperPrinterCard.svelte  /envoi\|en attente
 web/src/maison/ui/PaperPrinterCard.svelte  /(couleur|noire|jaune)
 web/src/maison/lib/paper.js  /pleine\|full/
+# Carte Lovelace de la maison, reprise telle quelle (branche locale « maison », jamais proposée en amont).
+web/src/maison/vendor/energy-perf-card.js  .
