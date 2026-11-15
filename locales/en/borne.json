@@ -7,10 +7,7 @@
   "borne.courant_actuel": "Current",
   "borne.session": "Session",
   "borne.mode_titre": "Mode",
-  "borne.aide_auto": "In auto mode the charger runs on the solar surplus: current and start follow the sun.",
-  "borne.charge_autorisee": "Charging",
-  "borne.autoriser": "Allow",
-  "borne.arreter": "Stop",
+  "borne.aide_auto": "Driven by the solar surplus in auto mode",
   "borne.confirmer_arret": "Stop charging?",
   "borne.courant_consigne": "Charging current",
   "borne.total": "{kwh} kWh delivered since commissioning",
@@ -40,5 +37,10 @@
   "borne.etat.residual_current": "Residual current",
   "borne.etat.undervoltage": "Undervoltage",
   "borne.etat.overvoltage": "Overvoltage",
-  "borne.etat.overheating": "Overheating"
+  "borne.etat.overheating": "Overheating",
+  "borne.consigne": "Set point",
+  "borne.statut": "Charger status",
+  "borne.arreter_charge": "Stop charging",
+  "borne.demarrer_charge": "Start charging",
+  "borne.jauge": "Power {kw} kW of {max} kW"
 }

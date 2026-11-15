@@ -62,3 +62,16 @@ export function currentRange(device) {
   const max = Number.isFinite(kind.max) ? kind.max : 32;
   return { min, max, step: Number.isFinite(kind.step) && kind.step > 0 ? kind.step : 1 };
 }
+
+/** The gauge's full scale (kW): the most current on one phase at 230 V
+ *  (32 A → 7.4 kW), the scale a single-phase home station draws on. */
+export function fullScaleKw(range) {
+  const max = Number.isFinite(range?.max) ? range.max : 32;
+  return Math.round((max * 230) / 100) / 10;
+}
+
+/** How full the gauge is, 0 to 1 (power in W, scale in kW). */
+export function gaugeFraction(powerW, scaleKw) {
+  if (typeof powerW !== 'number' || !Number.isFinite(powerW) || !(scaleKw > 0)) return 0;
+  return Math.min(1, Math.max(0, powerW / 1000 / scaleKw));
+}
