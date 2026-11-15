@@ -534,6 +534,25 @@ enum Feed {
     Binary,
     Text,
     Switch,
+    /// A setting the device takes in a range (a set point).
+    Number {
+        min: Option<f64>,
+        max: Option<f64>,
+        step: Option<f64>,
+    },
+    /// A setting among the device's choices (a mode).
+    Select {
+        options: Vec<String>,
+    },
+}
+
+/// An f32 as the device means it: its shortest decimal form (0.1, not
+/// 0.10000000149011612).
+fn shortest(raw: f32) -> Option<f64> {
+    raw.to_string()
+        .parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite())
 }
 
 /// An entity of a device that is not a satellite, and the point it feeds.
@@ -556,11 +575,13 @@ impl Extra {
     /// their kind as a suffix (`<key>_switch`), whatever the order of the
     /// list, so adding an entity to the firmware moves no other key.
     fn from_listed(listed: &[(u16, api::Listed)]) -> Vec<Self> {
-        const ORDER: [u16; 4] = [
+        const ORDER: [u16; 6] = [
             api::LIST_SENSOR,
             api::LIST_BINARY_SENSOR,
             api::LIST_TEXT_SENSOR,
             api::LIST_SWITCH,
+            api::LIST_NUMBER,
+            api::LIST_SELECT,
         ];
         let mut extras: Vec<Self> = Vec::new();
         let mut bases = std::collections::HashSet::new();
@@ -592,35 +613,8 @@ impl Extra {
                 if extras.iter().any(|e| e.point == point) {
                     continue;
                 }
-                let (feed, unit) = match kind {
-                    api::LIST_SENSOR => match l.unit.trim() {
-                        "kW" => {
-                            // In watts, three decimals fewer.
-                            let decimals = (l.decimals >= 0).then(|| {
-                                i32::try_from(l.decimals)
-                                    .unwrap_or(0)
-                                    .saturating_sub(3)
-                                    .max(0)
-                            });
-                            (
-                                Feed::Sensor {
-                                    scale: 1000.0,
-                                    decimals: Some(decimals.unwrap_or(1)),
-                                },
-                                Some(Unit::Watt),
-                            )
-                        }
-                        other => (
-                            Feed::Sensor {
-                                scale: 1.0,
-                                decimals: None,
-                            },
-                            Unit::parse(other),
-                        ),
-                    },
-                    api::LIST_BINARY_SENSOR => (Feed::Binary, None),
-                    api::LIST_TEXT_SENSOR => (Feed::Text, None),
-                    _ => (Feed::Switch, None),
+                let Some((feed, unit)) = Self::feed_of(kind, l) else {
+                    continue;
                 };
                 extras.push(Self {
                     key: l.key,
@@ -642,8 +636,61 @@ impl Extra {
         extras
     }
 
+    /// What a listed entity feeds, and its unit (`None`: no point).
+    fn feed_of(kind: u16, l: &api::Listed) -> Option<(Feed, Option<Unit>)> {
+        Some(match kind {
+            api::LIST_SENSOR => match l.unit.trim() {
+                "kW" => {
+                    // In watts, three decimals fewer.
+                    let decimals = (l.decimals >= 0).then(|| {
+                        i32::try_from(l.decimals)
+                            .unwrap_or(0)
+                            .saturating_sub(3)
+                            .max(0)
+                    });
+                    (
+                        Feed::Sensor {
+                            scale: 1000.0,
+                            decimals: Some(decimals.unwrap_or(1)),
+                        },
+                        Some(Unit::Watt),
+                    )
+                }
+                other => (
+                    Feed::Sensor {
+                        scale: 1.0,
+                        decimals: None,
+                    },
+                    Unit::parse(other),
+                ),
+            },
+            api::LIST_BINARY_SENSOR => (Feed::Binary, None),
+            api::LIST_TEXT_SENSOR => (Feed::Text, None),
+            api::LIST_NUMBER => (
+                Feed::Number {
+                    min: l.min.and_then(shortest),
+                    max: l.max.and_then(shortest),
+                    step: l.step.and_then(shortest).filter(|s| *s > 0.0),
+                },
+                Unit::parse(l.unit.trim()),
+            ),
+            api::LIST_SELECT => {
+                if l.options.is_empty() {
+                    return None;
+                }
+                (
+                    Feed::Select {
+                        options: l.options.clone(),
+                    },
+                    None,
+                )
+            }
+            _ => (Feed::Switch, None),
+        })
+    }
+
     fn spec(&self) -> PointSpec {
-        let kind = match self.feed {
+        let kind = match &self.feed {
             Feed::Sensor { .. } => Kind::Numeric {
                 min: None,
                 max: None,
@@ -651,12 +698,25 @@ impl Extra {
             },
             Feed::Binary | Feed::Switch => Kind::Binary,
             Feed::Text => Kind::Text,
+            Feed::Number { min, max, step } => Kind::Numeric {
+                min: *min,
+                max: *max,
+                step: *step,
+            },
+            Feed::Select { options } => Kind::Enum {
+                values: options.iter().map(|o| o.as_str().into()).collect(),
+            },
         };
-        let write = self.feed == Feed::Switch;
+        let write = matches!(
+            self.feed,
+            Feed::Switch | Feed::Number { .. } | Feed::Select { .. }
+        );
         let mut spec = spec(&self.point, &self.label, kind, write, self.unit.clone());
         // What the device says it is beats a guess from the key.
         let semantic = match (&self.feed, self.device_class.as_str()) {
             (Feed::Switch, _) => Some(Semantic::OnOff),
+            // A set point or a mode: a setting, never a measure.
+            (Feed::Number { .. } | Feed::Select { .. }, _) => Some(Semantic::Config),
             (Feed::Sensor { .. }, "humidity") => Some(Semantic::Humidity),
             (Feed::Sensor { .. }, "battery") => Some(Semantic::Battery),
             (Feed::Sensor { .. }, "temperature") => Some(Semantic::Temperature),
@@ -673,11 +733,13 @@ impl Extra {
 
     /// The point's value for a sensor's reading.
     fn number(&self, raw: f32) -> Option<Value> {
-        let Feed::Sensor { scale, decimals } = self.feed else {
-            return None;
+        let (scale, decimals) = match self.feed {
+            Feed::Sensor { scale, decimals } => (scale, decimals),
+            Feed::Number { .. } => (1.0, None),
+            _ => return None,
         };
         // The f32's shortest decimal form: 531.473, not 531.4730224609375.
-        let v = raw.to_string().parse::<f64>().ok()? * scale;
+        let v = shortest(raw)? * scale;
         let v = match decimals {
             Some(d) => {
                 let f = 10f64.powi(d.min(9));
@@ -695,6 +757,8 @@ fn kind_suffix(kind: u16) -> &'static str {
         api::LIST_BINARY_SENSOR => "binary",
         api::LIST_TEXT_SENSOR => "text",
         api::LIST_SWITCH => "switch",
+        api::LIST_NUMBER => "number",
+        api::LIST_SELECT => "select",
         _ => "sensor",
     }
 }
@@ -1035,6 +1099,21 @@ async fn on_message(
                 ctx.set_state(id, &extra.point, value);
             }
         }
+        api::NUMBER_STATE => {
+            if let Some((extra, value)) = api::number_state(payload).and_then(|(key, raw)| {
+                let extra = entities.extra(key)?;
+                Some((extra, extra.number(raw?)?))
+            }) {
+                ctx.set_state(id, &extra.point, value);
+            }
+        }
+        api::SELECT_STATE => {
+            if let Some((extra, choice)) = api::select_state(payload)
+                .and_then(|(key, choice)| Some((entities.extra(key)?, choice?)))
+            {
+                ctx.set_state(id, &extra.point, Value::Text(choice.into()));
+            }
+        }
         api::BINARY_SENSOR_STATE => {
             if let Some((extra, on)) =
                 api::binary_state(payload).and_then(|(key, on)| Some((entities.extra(key)?, on?)))
@@ -1096,16 +1175,29 @@ async fn order(
             .map_err(|e| format!("{e:#}"));
     }
     if let Some(extra) = entities.extras.iter().find(|e| *e.point == *command.key) {
-        let (Feed::Switch, Value::Bool(on)) = (&extra.feed, &command.value) else {
-            return Err(moli_i18n::tr!(
-                "pilotes.esphome.lecture_seule",
-                point = extra.point
-            ));
+        let (kind, payload) = match (&extra.feed, &command.value) {
+            (Feed::Switch, Value::Bool(on)) => {
+                (api::SWITCH_COMMAND, api::set_switch(extra.key, *on))
+            }
+            (Feed::Number { .. }, Value::Float(_) | Value::Int(_)) => {
+                // The hub checked the range; an f32 is what the device takes.
+                #[allow(clippy::cast_possible_truncation)]
+                let v = command.value.as_f64().unwrap_or(f64::NAN) as f32;
+                (api::NUMBER_COMMAND, api::set_number(extra.key, v))
+            }
+            (Feed::Select { options }, Value::Text(choice))
+                if options.iter().any(|o| *o == **choice) =>
+            {
+                (api::SELECT_COMMAND, api::set_select(extra.key, choice))
+            }
+            _ => {
+                return Err(moli_i18n::tr!(
+                    "pilotes.esphome.lecture_seule",
+                    point = extra.point
+                ));
+            }
         };
-        return tx
-            .send(api::SWITCH_COMMAND, &api::set_switch(extra.key, *on))
-            .await
-            .map_err(|e| format!("{e:#}"));
+        return tx.send(kind, &payload).await.map_err(|e| format!("{e:#}"));
     }
     let key = entities
         .media_player
@@ -1303,6 +1395,66 @@ mod tests {
         assert!(
             reason.contains("moli-os secrets forget voix api_key"),
             "{reason}"
+        );
+    }
+
+    #[test]
+    fn set_points_and_modes_become_writable_settings() {
+        let listed = vec![
+            (
+                api::LIST_NUMBER,
+                api::Listed {
+                    object_id: "room_temperature_setpoint".into(),
+                    key: 9,
+                    name: "Room temperature setpoint".into(),
+                    unit: "°C".into(),
+                    min: Some(10.0),
+                    max: Some(30.0),
+                    step: Some(0.5),
+                    ..Default::default()
+                },
+            ),
+            (
+                api::LIST_SELECT,
+                api::Listed {
+                    object_id: "mode".into(),
+                    key: 4,
+                    name: "Mode".into(),
+                    options: vec!["Heating".into(), "Cooling".into()],
+                    ..Default::default()
+                },
+            ),
+            (
+                api::LIST_SELECT,
+                api::Listed {
+                    object_id: "empty".into(),
+                    key: 5,
+                    name: "Empty".into(),
+                    ..Default::default()
+                },
+            ),
+        ];
+        let extras = Extra::from_listed(&listed);
+        assert_eq!(extras.len(), 2, "a select without options gets no point");
+        let set_point = extras[0].spec();
+        assert!(set_point.access.write);
+        assert_eq!(set_point.semantic, Semantic::Config);
+        assert_eq!(
+            set_point.kind,
+            Kind::Numeric {
+                min: Some(10.0),
+                max: Some(30.0),
+                step: Some(0.5)
+            }
+        );
+        assert_eq!(extras[0].number(18.5), Some(Value::Float(18.5)));
+        let mode = extras[1].spec();
+        assert!(mode.access.write);
+        assert_eq!(
+            mode.kind,
+            Kind::Enum {
+                values: vec!["Heating".into(), "Cooling".into()]
+            }
         );
     }
 
