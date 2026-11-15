@@ -1,4 +1,11 @@
 {
+  "serveur.alexa_skill.acteur_armement": "Alexa",
+  "serveur.alexa_skill.armee": "Alarme armée en {mode}.",
+  "serveur.alexa_skill.armement_echoue": "Je n’ai pas pu armer : {raison}",
+  "serveur.alexa_skill.armement_retenu": "L’armement attend l’accord d’une personne sur l’écran.",
+  "serveur.alexa_skill.mode_away": "Absence",
+  "serveur.alexa_skill.mode_home": "Présence",
+  "serveur.alexa_skill.mode_night": "Nuit",
   "serveur.alexa_skill.acteur": "Alexa (code vocal)",
   "serveur.alexa_skill.code_bloque": "Code vocal bloqué pour {minutes} minutes après plusieurs erreurs.",
   "serveur.alexa_skill.code_faux": "Code incorrect.",
