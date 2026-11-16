@@ -53,6 +53,8 @@
   "maison.accueil.clim": "Air conditioning",
   "maison.accueil.devant_porte": "At the door",
   "maison.accueil.toutes_cameras": "All cameras",
+  "maison.accueil.camera_precedente": "Previous camera: {nom}",
+  "maison.accueil.camera_suivante": "Next camera: {nom}",
   "maison.accueil.dernier_passage": "Last seen {when}",
   "maison.accueil.personne": "No one for two days",
   "maison.accueil.telecommande": "Remote",

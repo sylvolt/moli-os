@@ -151,18 +151,33 @@
               ? t('maison.air.mediocre')
               : t('maison.air.mauvais'),
   );
-  const bell = $derived((cfg.favorites?.cameras ?? [])[0]);
+  const cams = $derived(cfg.favorites?.cameras ?? []);
+  const bell = $derived(cams[0]);
 
-  // The last real passage at the door (the history knows; the live value
-  // is refreshed every few seconds whatever happens).
+  // The card shows the door; arrows go through the other favorite cameras,
+  // and it comes back to the door by itself after a while untouched.
+  const BACK_TO_DOOR = 120_000;
+  let camIdx = $state(0);
+  const shown = $derived(cams[camIdx] ?? bell);
+  const step = (by) => (camIdx = (camIdx + by + cams.length) % cams.length);
+  $effect(() => {
+    if (camIdx === 0) return;
+    const timer = setTimeout(() => (camIdx = 0), BACK_TO_DOOR);
+    return () => clearTimeout(timer);
+  });
+
+  // The last real passage before the camera shown (the history knows; the
+  // live value is refreshed every few seconds whatever happens). An answer
+  // for a camera no longer shown is dropped.
   let passage = $state(null);
+  const seen = (id) => lastSeen(id).then((ts) => shown?.id === id && (passage = ts));
   onMount(() => {
-    const refresh = () => bell && lastSeen(bell.id).then((ts) => (passage = ts));
-    const t = setInterval(refresh, 120_000);
+    const t = setInterval(() => shown && seen(shown.id), 120_000);
     return () => clearInterval(t);
   });
   $effect(() => {
-    if (bell) lastSeen(bell.id).then((ts) => (passage = ts));
+    passage = null;
+    if (shown) seen(shown.id);
   });
 </script>
 
@@ -260,10 +275,31 @@
     {#if bell}
       <section class="card doorbell">
         <div class="card-head">
-          <h2><Icon name="bell" size={18} />{t('maison.accueil.devant_porte')}</h2>
+          {#if camIdx === 0}
+            <h2><Icon name="bell" size={18} />{t('maison.accueil.devant_porte')}</h2>
+          {:else}
+            <h2><Icon name="cctv" size={18} />{shown.name}</h2>
+          {/if}
           <a class="more" href="#/cameras" aria-label={t('maison.accueil.toutes_cameras')}><Icon name="arrow-top-right" size={18} /></a>
         </div>
-        <CameraTile id={bell.id} name={bell.name} refresh={15} />
+        <div class="cam-carousel">
+          <!-- One tile per camera: a load still running for the previous one
+               must not hold back the new one. -->
+          {#key shown.id}
+            <CameraTile id={shown.id} name={shown.name} refresh={15} />
+          {/key}
+          {#if cams.length > 1}
+            <button class="cam-step prev" onclick={() => step(-1)} aria-label={t('maison.accueil.camera_precedente', { nom: cams[(camIdx - 1 + cams.length) % cams.length].name })}>
+              <Icon name="chevron-left" size={22} />
+            </button>
+            <button class="cam-step next" onclick={() => step(1)} aria-label={t('maison.accueil.camera_suivante', { nom: cams[(camIdx + 1) % cams.length].name })}>
+              <Icon name="chevron-right" size={22} />
+            </button>
+            <span class="cam-dots" aria-hidden="true">
+              {#each cams as c, i (c.id)}<span class:on={i === camIdx}></span>{/each}
+            </span>
+          {/if}
+        </div>
         <p class="muted small">{passage ? t('maison.accueil.dernier_passage', { when: relative(passage, home.now) }) : t('maison.accueil.personne')}</p>
       </section>
     {/if}
@@ -395,6 +431,59 @@
   .doorbell {
     grid-column: span 5;
     grid-row: span 2;
+  }
+
+  .cam-carousel {
+    position: relative;
+  }
+
+  .cam-step {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 0.45);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  .cam-step:hover,
+  .cam-step:focus-visible {
+    background: rgb(0 0 0 / 0.65);
+  }
+
+  .cam-step.prev {
+    left: 10px;
+  }
+
+  .cam-step.next {
+    right: 10px;
+  }
+
+  .cam-dots {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .cam-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.5);
+  }
+
+  .cam-dots span.on {
+    background: #fff;
   }
 
   .remote {

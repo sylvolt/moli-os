@@ -53,6 +53,8 @@
   "maison.accueil.clim": "Climatisation",
   "maison.accueil.devant_porte": "Devant la porte",
   "maison.accueil.toutes_cameras": "Toutes les caméras",
+  "maison.accueil.camera_precedente": "Caméra précédente : {nom}",
+  "maison.accueil.camera_suivante": "Caméra suivante : {nom}",
   "maison.accueil.dernier_passage": "Dernier passage {when}",
   "maison.accueil.personne": "Personne depuis deux jours",
   "maison.accueil.telecommande": "Télécommande",
