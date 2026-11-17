@@ -80,6 +80,8 @@
   // ── What plays ────────────────────────────────────────────────
   // { kind: 'live' } | { kind: 'video', start, end } | { kind: 'image', event, at }
   let mode = $state({ kind: 'live' });
+  // The live view failed here (away from home, a firewall): the images instead.
+  let noLive = $state(false);
   let video = $state(null);
   let position = $state(null); // seconds, while a recording plays
   let notice = $state('');
@@ -222,10 +224,16 @@
     {:else if mode.kind === 'image'}
       <img src="{base}/events/{encodeURIComponent(mode.event)}/image" alt={t('revue.photo_de', { heure: hm(mode.at) })} />
       <span class="badge past"><Icon name="camera" size={14} />{hms(mode.at)}</span>
-    {:else if live}
-      <LiveVideo {id} />
+    {:else if live && !noLive}
+      <LiveVideo {id} onfail={() => (noLive = true)} />
     {:else}
       <CameraTile {id} {name} refresh={battery ? 0 : 2} {battery} big />
+      {#if noLive}
+        <p class="no-live">
+          {t('salon.cameras.direct_impossible')}
+          <button onclick={() => (noLive = false)}>{t('salon.cameras.essayer_direct')}</button>
+        </p>
+      {/if}
     {/if}
 
     {#if showZones && zones.length}
@@ -382,6 +390,29 @@
   .player > :global(*) {
     grid-area: 1 / 1;
     min-height: 0;
+  }
+
+  .no-live {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    color: var(--ink-2);
+    font-size: 13px;
+  }
+
+  .no-live button {
+    background: none;
+    border: 0;
+    padding: 0 0 0 6px;
+    color: var(--cool);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   .player > :global(.live) {
