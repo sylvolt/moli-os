@@ -486,7 +486,6 @@ mod tests {
     use super::*;
 
     #[test]
-#[test]
     fn a_scene_never_carries_an_order_that_wants_the_code_each_time() {
         let guard =
             "[[guard.code_each_time]]\npoint = \"alarme:maison/mode\"\nvalues = [\"off\"]\n";
