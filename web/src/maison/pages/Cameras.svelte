@@ -22,19 +22,22 @@
   let startWith = $state(null); // an event to play as the viewer opens
   const current = $derived(cameras.find((c) => c.id === open));
 
-  // Cameras whose NVR tells their past: their newest events take the place
-  // of the security card (the doors stay on the home page).
-  const reviewed = $derived(cameras.filter((c) => hub.devices[c.id]?.review));
-  function openAt(id, item = null) {
-    startWith = item;
-    open = id;
-  }
-
   // Live video goes from the camera to this browser: away from home (Access,
   // outside) it cannot, so the images show at once. At home, a live view that
   // fails falls back to them too, never a black screen.
   const atHome = $derived(!['access', 'outside'].includes(hub.session?.via));
   let noLive = $state(null);
+
+  // Cameras whose NVR tells their past: their newest events, above the
+  // security card. At home only: the past (clips above all) is declared
+  // « not from outside » (`routes.txt`, column `distant`); away, the images
+  // and the live view as before.
+  const pastOf = (id) => atHome && hub.devices[id]?.review;
+  const reviewed = $derived(cameras.filter((c) => pastOf(c.id)));
+  function openAt(id, item = null) {
+    startWith = item;
+    open = id;
+  }
 
   // What the camera saw today, from the history (rising edges only).
   const KINDS = [
@@ -50,7 +53,7 @@
   $effect(() => {
     const id = open;
     seen = [];
-    if (!id || hub.devices[id]?.review) return;
+    if (!id || pastOf(id)) return;
     const d = hub.devices[id];
     const keys = KINDS.filter(([k]) => d?.points.some((p) => p.key === k));
     seenLoading = true;
@@ -92,9 +95,9 @@
 
   {#if reviewed.length}
     <RecentEvents cameras={reviewed} onopen={openAt} />
-  {:else}
-    <SecurityPanel />
   {/if}
+  <!-- Its switches and its « alarm under way » line stay, under the events. -->
+  <SecurityPanel />
 
   <div class="wall">
     {#each cameras as cam (cam.id)}
@@ -117,7 +120,7 @@
         <button class="close" onclick={() => (open = null)} aria-label={t('commun.fermer')}><Icon name="close" size={22} /></button>
       </div>
       {#key current.id}
-        {#if hub.devices[current.id]?.review}
+        {#if pastOf(current.id)}
           <!-- Its past from the NVR: frieze, events, recordings, zones. -->
           <CameraReview id={current.id} name={current.name} start={startWith} live={hub.devices[current.id]?.live && !current.locked && atHome} battery={current.battery} />
         {:else if hub.devices[current.id]?.live && !current.locked && atHome && noLive !== current.id}
@@ -133,21 +136,21 @@
           {/if}
         {/if}
       {/key}
-      {#if !hub.devices[current.id]?.review}
-      <div class="seen">
-        <h3>{t('salon.cameras.aujourdhui')}</h3>
-        {#if seenLoading}
-          <p class="muted">…</p>
-        {:else if seen.length}
-          <ul>
-            {#each seen as s (s.ts + s.label)}
-              <li><Icon name={s.icon} size={16} /><b>{t(s.label)}</b><span class="muted">{clock(s.ts)} · {relative(s.ts, home.now)}</span></li>
-            {/each}
-          </ul>
-        {:else}
-          <p class="muted">{t('salon.cameras.rien')}</p>
-        {/if}
-      </div>
+      {#if !pastOf(current.id)}
+        <div class="seen">
+          <h3>{t('salon.cameras.aujourdhui')}</h3>
+          {#if seenLoading}
+            <p class="muted">…</p>
+          {:else if seen.length}
+            <ul>
+              {#each seen as s (s.ts + s.label)}
+                <li><Icon name={s.icon} size={16} /><b>{t(s.label)}</b><span class="muted">{clock(s.ts)} · {relative(s.ts, home.now)}</span></li>
+              {/each}
+            </ul>
+          {:else}
+            <p class="muted">{t('salon.cameras.rien')}</p>
+          {/if}
+        </div>
       {/if}
     </div>
   </div>

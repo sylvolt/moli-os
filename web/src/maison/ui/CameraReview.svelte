@@ -24,7 +24,10 @@
   let items = $state([]);
   let recorded = $state([]);
   let loading = $state(true);
-  let problem = $state('');
+  // Why the day cannot show: a refusal in the house's words (a guest, a
+  // protected room: the server says them), else « Frigate does not answer »
+  // with what it said kept for a hover (`Frigate: HTTP 500 for …`).
+  let problem = $state(null);
 
   async function load() {
     const { after, before } = span;
@@ -33,12 +36,16 @@
       const res = await fetch(`${base}?after=${after}&before=${Math.min(before, Math.ceil(nowS()))}`);
       const body = await res.json().catch(() => ({}));
       if (`${span.after}` !== asked) return; // another day meanwhile
+      if (res.status === 403) {
+        problem = { text: body.error ?? t('revue.injoignable'), detail: '' };
+        return;
+      }
       if (!res.ok) throw new Error(body.error ?? res.statusText);
       items = body.items ?? [];
       recorded = body.recorded ?? [];
-      problem = '';
+      problem = null;
     } catch (e) {
-      problem = e.message;
+      problem = { text: t('revue.injoignable'), detail: e.message };
     } finally {
       loading = false;
     }
@@ -335,7 +342,7 @@
     {#if loading}
       <p class="muted">…</p>
     {:else if problem}
-      <p class="muted">{t('revue.injoignable')} <small>{problem}</small></p>
+      <p class="muted" title={problem.detail || null}>{problem.text}</p>
     {:else if !shown.length}
       <p class="muted">{t('revue.rien')}</p>
     {:else}
