@@ -26,7 +26,13 @@
     const every = setInterval(() => (now = Date.now()), 500);
     return () => clearInterval(every);
   });
-  const left = $derived(secondsLeft(until, now));
+  // The clock read when it is drawn: `now` only says when to draw again. A
+  // new delay is drawn before any tick, and the last tick may be old (the
+  // page opened long ago): it would show a wrong number at first.
+  const left = $derived.by(() => {
+    void now;
+    return secondsLeft(until, Date.now());
+  });
 
   const ICONS = { home: 'home', night: 'moon', away: 'walk' };
   const modeName = (m) => t(`alarme.mode.${m}`);
@@ -466,9 +472,18 @@
     grid-template-columns: auto 1fr auto;
     align-items: start;
     gap: 10px;
-    padding: 9px 0;
+    padding: 6px 0;
     border-top: 1px solid var(--line);
     color: var(--ink-2);
+  }
+
+  /* Thirty events would run far below the sensors: the latest show, the
+     rest scroll within the card. */
+  .past ul {
+    max-height: 340px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
   }
 
   .past li span {
