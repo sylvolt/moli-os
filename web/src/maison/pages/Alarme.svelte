@@ -87,11 +87,11 @@
   $effect(() => {
     if (!id) return;
     state; // reread when it moves
-    Promise.all([series('event'), series('cause')])
-      .then(([events, causes]) => (past = journal(events, causes).slice(0, 30)))
+    Promise.all([series('event'), series('cause'), series('silent')])
+      .then(([events, causes, silents]) => (past = journal(events, causes, silents).slice(0, 30)))
       .catch(() => {});
   });
-  const EVENT_ICONS = { armed: 'lock', arming: 'timer', disarmed: 'shield', arm_failure: 'warning', pending: 'walk', triggered: 'alert' };
+  const EVENT_ICONS = { armed: 'lock', arming: 'timer', disarmed: 'shield', arm_failure: 'warning', pending: 'walk', triggered: 'alert', silent: 'warning' };
 </script>
 
 <div class="alarme">
@@ -126,9 +126,12 @@
           {@const open = blocking(setup, m, valueOf)}
           {@const watched = setup.sensors.filter((s) => s.modes.includes(m)).length}
           {@const on = current === m}
-          <button class="opt" class:on class:blocked={open.length > 0 && !on} aria-pressed={on} disabled={busy !== null || on || open.length > 0} onclick={() => set(m)}>
+          <!-- Once a mode is chosen (leaving, armed, entering, ringing), only
+               « off » is taken: the alarm refuses another mode, so it is not
+               offered. -->
+          <button class="opt" class:on class:blocked={open.length > 0 && !on && current === 'off'} aria-pressed={on} disabled={busy !== null || on || current !== 'off' || open.length > 0} onclick={() => set(m)}>
             <span class="opt-head">
-              <Icon name={open.length && !on ? 'warning' : ICONS[m]} size={20} /><b>{modeName(m)}</b>
+              <Icon name={open.length && !on && current === 'off' ? 'warning' : ICONS[m]} size={20} /><b>{modeName(m)}</b>
             </span>
             <small>
               {t('alarme.sortie')} {words(d.exit)} · {t('alarme.entree')} {words(d.entry)} · {t('alarme.sirene')}
@@ -144,11 +147,11 @@
             <Icon name="tune" size={16} />{t('alarme.reglages.titre')}
           </button>
         {:else}
-          <small class="muted">{t('alarme.reglages.desarmer_pour')}</small>
+          <small class="muted">{t('alarme.desarmer_pour_changer')}</small>
         {/if}
       </div>
 
-      {#each modes.filter((m) => current !== m && blocking(setup, m, valueOf).length) as m (m)}
+      {#each modes.filter((m) => current === 'off' && blocking(setup, m, valueOf).length) as m (m)}
         <p class="why"><Icon name="warning" size={15} />{t('alarme.impossible_mode', { mode: modeName(m), capteurs: blocking(setup, m, valueOf).join(', ') })}</p>
       {/each}
     </section>

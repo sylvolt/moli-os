@@ -3,7 +3,7 @@
   import { t } from '../../lib/i18n.svelte.js';
   import { untrack } from 'svelte';
   import Icon from './Icon.svelte';
-  import { MODES, candidates, draftOf, withoutMode, problems } from '../lib/alarm.js';
+  import { MODES, candidates, draftOf, withoutMode, problems, unchanged } from '../lib/alarm.js';
 
   /** The alarm's settings, changed here: its modes (delays) and the sensors
    *  each one watches. Kept by Moli once the house's code is typed (the
@@ -20,6 +20,9 @@
   const modeName = (m) => t(`alarme.mode.${m}`);
   const enabled = $derived(MODES.filter((m) => draft.modes[m]));
   const issues = $derived(problems(draft));
+  // Nothing changed: nothing to keep (the alarm would show the same, and
+  // the editor would wait for a change that never comes).
+  const same = $derived(unchanged(draft, setup));
   const chosen = $derived(new Set(draft.sensors.map((s) => s.point)));
   const offered = $derived(
     candidates(Object.values(hub.devices), (d) => nameOf(d.id))
@@ -55,7 +58,7 @@
   }
 
   async function save() {
-    if (issues.length || busy) return;
+    if (issues.length || same || busy) return;
     busy = true;
     const done = await act(`${id}/setup`, JSON.stringify(draft), t('alarme.reglages.enregistrer'));
     busy = false;
@@ -165,7 +168,7 @@
 
   <div class="foot">
     <small class="muted"><Icon name="lock" size={14} />{t('alarme.reglages.code')}</small>
-    <button class="save" onclick={save} disabled={issues.length > 0 || busy}>{t('alarme.reglages.enregistrer')}</button>
+    <button class="save" onclick={save} disabled={issues.length > 0 || same || busy}>{t('alarme.reglages.enregistrer')}</button>
   </div>
 </section>
 

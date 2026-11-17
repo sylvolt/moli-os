@@ -57,17 +57,20 @@ export function delay(s) {
   return { n: Math.round(s / 60), unit: 'min' };
 }
 
-/** The alarm's past events from the history of `event` and `cause`:
- *  newest first, each with the cause recorded with it. */
-export function journal(events, causes) {
-  const c = [...(causes ?? [])].sort((a, b) => a[0] - b[0]);
+/** The alarm's past events from the history of `event`, `cause` and
+ *  `silent`: newest first, each with the sensors recorded with it (those
+ *  in cause, or those that stopped answering). */
+export function journal(events, causes, silents) {
+  const sorted = (h) => [...(h ?? [])].sort((a, b) => a[0] - b[0]);
+  const c = sorted(causes);
+  const quiet = sorted(silents);
+  // Written just before it (same instant, give or take).
+  const near = (h, ts) => h.filter(([t]) => t <= ts + 2000 && t >= ts - 5000).at(-1)?.[1] ?? '';
   return [...(events ?? [])]
     .filter(([, v]) => typeof v === 'string' && v)
     .map(([ts, what]) => {
-      // Its cause is written just before it (same instant, give or take).
-      const near = c.filter(([t]) => t <= ts + 2000 && t >= ts - 5000).at(-1);
-      const cause = ['arm_failure', 'pending', 'triggered'].includes(what) ? (near?.[1] ?? '') : '';
-      return { ts, what, cause };
+      const cause = ['arm_failure', 'pending', 'triggered'].includes(what) ? near(c, ts) : what === 'silent' ? near(quiet, ts) : '';
+      return { ts, what, cause: typeof cause === 'string' ? cause : '' };
     })
     .sort((a, b) => b.ts - a.ts);
 }
@@ -116,4 +119,18 @@ export function problems(draft) {
   }
   if (draft.sensors.some((s) => !s.modes.length)) out.push('alarme.reglages.capteur_sans_mode');
   return out;
+}
+
+/** The settings as the alarm writes them back: `immediate` only when true,
+ *  so a draft and what the alarm shows compare by meaning. */
+function normal(settings) {
+  return JSON.stringify({
+    modes: Object.fromEntries(Object.entries(settings.modes ?? {}).sort(([a], [b]) => a.localeCompare(b))),
+    sensors: (settings.sensors ?? []).map(({ immediate, ...s }) => (immediate ? { ...s, immediate: true } : s)),
+  });
+}
+
+/** Whether the draft changes nothing: keeping it would only ask the code. */
+export function unchanged(draft, setup) {
+  return normal(draft) === normal(setup);
 }

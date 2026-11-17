@@ -77,6 +77,24 @@ test('the journal pairs each event with its cause', () => {
   );
 });
 
+test('a silent sensor is named in the journal, from the point `silent`', () => {
+  const j = journal(
+    [
+      [1000, 'armed'],
+      [70000, 'silent'],
+    ],
+    [[1000, '']],
+    [[69999, 'Porte du garage']],
+  );
+  assert.deepEqual(
+    j.map((e) => [e.what, e.cause]),
+    [
+      ['silent', 'Porte du garage'],
+      ['armed', ''],
+    ],
+  );
+});
+
 import { candidates, draftOf, withoutMode, problems } from './alarm.js';
 
 test('what can be a sensor: doors, presence, camera zones', () => {
@@ -103,4 +121,17 @@ test('a draft: a mode turned off leaves the sensors, and what blocks saving', ()
   assert.ok(problems(without).includes('alarme.reglages.aucun_mode'));
   d.modes.night.exit = 4000;
   assert.ok(problems(d).includes('alarme.reglages.delai_invalide'));
+});
+
+import { unchanged } from './alarm.js';
+
+test('a draft that changes nothing is told apart, `immediate: false` or not', () => {
+  const setup = { modes: { night: { exit: 5, entry: 5, trigger: 480 } }, sensors: [{ point: 'z2m:porte/contact', name: 'Porte', modes: ['night'] }] };
+  const draft = { modes: { night: { exit: 5, entry: 5, trigger: 480 } }, sensors: [{ point: 'z2m:porte/contact', name: 'Porte', modes: ['night'], immediate: false }] };
+  assert.ok(unchanged(draft, setup));
+  draft.sensors[0].immediate = true;
+  assert.ok(!unchanged(draft, setup));
+  draft.sensors[0].immediate = false;
+  draft.modes.night.exit = 30;
+  assert.ok(!unchanged(draft, setup));
 });

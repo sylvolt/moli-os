@@ -41,6 +41,8 @@
   "alarme.evenement.pending": "Entry detected",
   "alarme.evenement.triggered": "Triggered",
   "alarme.evenement.disarmed": "Disarmed",
+  "alarme.evenement.silent": "Sensor silent",
+  "alarme.desarmer_pour_changer": "To change mode or settings, disarm first (with the code).",
   "alarme.capteur.rien_vu": "Nothing seen since start",
   "alarme.rien_surveille": "Nothing is watched",
   "alarme.impossible_mode": "{mode} not possible: {capteurs}",
@@ -63,6 +65,5 @@
   "alarme.reglages.enregistrer": "Save the settings",
   "alarme.reglages.aucun_mode": "Keep at least one mode.",
   "alarme.reglages.delai_invalide": "Delays go from 0 to 3,600 seconds.",
-  "alarme.reglages.capteur_sans_mode": "Each sensor must be watched in at least one mode.",
-  "alarme.reglages.desarmer_pour": "Disarm to change the settings."
+  "alarme.reglages.capteur_sans_mode": "Each sensor must be watched in at least one mode."
 }

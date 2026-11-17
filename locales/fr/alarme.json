@@ -41,6 +41,8 @@
   "alarme.evenement.pending": "Entrée détectée",
   "alarme.evenement.triggered": "Déclenchée",
   "alarme.evenement.disarmed": "Désarmée",
+  "alarme.evenement.silent": "Capteur muet",
+  "alarme.desarmer_pour_changer": "Pour changer de mode ou de réglages, désarmer d’abord (avec le code).",
   "alarme.capteur.rien_vu": "Rien vu depuis le démarrage",
   "alarme.rien_surveille": "Rien n’est surveillé",
   "alarme.impossible_mode": "{mode} impossible : {capteurs}",
@@ -63,6 +65,5 @@
   "alarme.reglages.enregistrer": "Enregistrer les réglages",
   "alarme.reglages.aucun_mode": "Gardez au moins un mode.",
   "alarme.reglages.delai_invalide": "Les délais vont de 0 à 3 600 secondes.",
-  "alarme.reglages.capteur_sans_mode": "Chaque capteur doit être surveillé dans au moins un mode.",
-  "alarme.reglages.desarmer_pour": "Désarmez pour changer les réglages."
+  "alarme.reglages.capteur_sans_mode": "Chaque capteur doit être surveillé dans au moins un mode."
 }
