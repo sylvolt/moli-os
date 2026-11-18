@@ -458,6 +458,14 @@ fn zone_id(zone: &str) -> String {
     format!("zone.{zone}")
 }
 
+/// Whether one of this instance's devices is a zone (`<instance>:zone.…`).
+fn is_zone_device(instance: &str, id: &str) -> bool {
+    id.strip_prefix(instance)
+        .and_then(|rest| rest.strip_prefix(':'))
+        // Test maison seulement : les zones de l'ancienne branche (`zone-…`).
+        .is_some_and(|native| native.starts_with("zone.") || native.starts_with("zone-"))
+}
+
 /// A zone drawn on a camera, as a device: how many people, cars… stand in
 /// it now (Frigate's counts for the zone). A sensor for the alarm (a count
 /// above 0 is active).
@@ -743,6 +751,14 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
             found = async { zones_coming.as_mut().expect("guarded").await }, if zones_coming.is_some() => {
                 zones_coming = None;
                 let Ok(found) = found else { continue };
+                // A zone gone from Frigate's configuration leaves Moli too
+                // (`zone.` is never a camera's id, nor the server's).
+                let keep: Vec<_> = found.keys().map(|z| ctx.device_id(&zone_id(z))).collect();
+                for id in ctx.known_devices() {
+                    if is_zone_device(ctx.instance().as_str(), id.as_str()) && !keep.contains(&id) {
+                        ctx.remove_device(&id);
+                    }
+                }
                 for (zone, of) in &found {
                     ctx.upsert_device(zone_device(ctx, zone, of));
                     ctx.set_availability(&ctx.device_id(&zone_id(zone)), seen.available && connected);
@@ -997,6 +1013,11 @@ mod tests {
             },
         )]);
         assert_eq!(device_ids(&cameras, &zones), ["portail", "zone.allee"]);
+        // Only zones are ever removed when gone from Frigate.
+        assert!(is_zone_device("frigate", "frigate:zone.allee"));
+        assert!(!is_zone_device("frigate", "frigate:zone-allee"));
+        assert!(!is_zone_device("frigate", "frigate:frigate-server"));
+        assert!(!is_zone_device("frigate", "frigate2:zone.allee"));
         // A zone's counts read as a camera's: the loop gives them to the zone.
         assert_eq!(
             parse("allee/person", "1"),
