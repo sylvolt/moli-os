@@ -56,6 +56,10 @@ pub enum Read {
     Code(&'static [(i64, &'static str)]),
     /// 0 / 1.
     OnOff,
+    /// A mode the GX shows through several codes: `(name, code written,
+    /// codes read as it)`. Venus OS takes the first code and moves on by
+    /// itself to the others (ESS: 1 becomes 2 to 8 as the battery goes).
+    Group(&'static [(&'static str, i64, &'static [i64])]),
 }
 
 /// Units used here (`moli_core::Unit` is not `Copy`).
@@ -90,6 +94,9 @@ pub struct Bounds {
     pub min: f64,
     pub max: f64,
     pub step: f64,
+    /// -1 also means « no limit » (the GX's own word for it), on top of
+    /// `min..=max`; the point then declares -1 as its minimum.
+    pub no_limit: bool,
 }
 
 /// One reviewed topic: `<service>/<instance>/<path>` → a point.
@@ -154,6 +161,15 @@ const EV_STATUS: &[(i64, &str)] = &[
     (23, "switching_to_1_phase"),
 ];
 const EV_MODE: &[(i64, &str)] = &[(0, "manual"), (1, "auto"), (2, "scheduled")];
+/// ESS modes (`Settings/CGwacs/BatteryLife/State`), as the GX's own menu
+/// writes and reads them: 1 « optimized with BatteryLife » (then 2 to 8 as
+/// it goes), 9 « keep batteries charged », 10 « optimized without
+/// BatteryLife » (then 11, 12). Read on a real GX: 11.
+const ESS_MODE: &[(&str, i64, &[i64])] = &[
+    ("optimized_batterylife", 1, &[1, 2, 3, 4, 5, 6, 7, 8]),
+    ("optimized", 10, &[10, 11, 12]),
+    ("keep_charged", 9, &[9]),
+];
 
 const fn num(unit: UnitKind, round: u8) -> Read {
     Read::Number {
@@ -202,10 +218,20 @@ const ANY: Bounds = Bounds {
     min: 0.0,
     max: 0.0,
     step: 0.0,
+    no_limit: false,
+};
+
+/// A power limit of the ESS: 0 to 10 kW, or -1 for none.
+const POWER_LIMIT: Bounds = Bounds {
+    min: 0.0,
+    max: 10_000.0,
+    step: 100.0,
+    no_limit: true,
 };
 
 /// The reviewed topics. Writable ones are the user's own settings, never a
-/// protection (no charge voltage, no current limit of the battery).
+/// protection (no charge voltage, no current limit of the battery: the ESS
+/// power ceilings sit above what the BMS allows, never in its place).
 pub const TABLE: &[Topic] = &[
     // The battery (its BMS or monitor).
     topic(
@@ -357,6 +383,7 @@ pub const TABLE: &[Topic] = &[
             min: 6.0,
             max: 32.0,
             step: 1.0,
+            no_limit: false,
         },
     ),
     topic(
@@ -470,7 +497,48 @@ pub const TABLE: &[Topic] = &[
             min: 10.0,
             max: 100.0,
             step: 5.0,
+            no_limit: false,
         },
+    ),
+    writable(
+        "settings",
+        "Settings/CGwacs/BatteryLife/State",
+        "ess_mode",
+        "pilotes.victron.mode_ess",
+        Read::Group(ESS_MODE),
+        ANY,
+    ),
+    // What the house draws from the grid when the ESS balances (W, < 0
+    // sends to it).
+    writable(
+        "settings",
+        "Settings/CGwacs/AcPowerSetPoint",
+        "grid_setpoint",
+        "pilotes.victron.consigne_reseau",
+        num(UnitKind::Watt, 0),
+        Bounds {
+            min: -5_000.0,
+            max: 5_000.0,
+            step: 10.0,
+            no_limit: false,
+        },
+    ),
+    // The ESS's own ceilings (the BMS and DVCC still cap below them).
+    writable(
+        "settings",
+        "Settings/CGwacs/MaxChargePower",
+        "max_charge_power",
+        "pilotes.victron.charge_max",
+        num(UnitKind::Watt, 0),
+        POWER_LIMIT,
+    ),
+    writable(
+        "settings",
+        "Settings/CGwacs/MaxDischargePower",
+        "max_discharge_power",
+        "pilotes.victron.decharge_max",
+        num(UnitKind::Watt, 0),
+        POWER_LIMIT,
     ),
 ];
 
@@ -559,6 +627,14 @@ pub fn decode(read: Read, body: &[u8]) -> Option<Value> {
             }
         }
         Read::OnOff => Value::Bool(number != 0.0),
+        Read::Group(modes) => {
+            #[allow(clippy::cast_possible_truncation)] // codes are small integers
+            let code = number.round() as i64;
+            match modes.iter().find(|(_, _, read)| read.contains(&code)) {
+                Some((name, _, _)) => Value::Text((*name).into()),
+                None => Value::Null,
+            }
+        }
     })
 }
 
@@ -582,9 +658,22 @@ pub fn encode(topic: &Topic, value: &Value) -> Result<String, String> {
                 ));
             }
         },
+        (Read::Group(modes), Value::Text(name)) => {
+            match modes.iter().find(|(n, _, _)| *n == &**name) {
+                Some((_, code, _)) => serde_json::json!(code),
+                None => {
+                    return Err(moli_i18n::tr!(
+                        "pilotes.victron.valeur_refusee",
+                        point = topic.key
+                    ));
+                }
+            }
+        }
         (Read::Number { .. }, Value::Float(_) | Value::Int(_)) => {
             let v = value.as_f64().unwrap_or(f64::NAN);
-            if !(v.is_finite() && bounds.min <= v && v <= bounds.max) {
+            #[allow(clippy::float_cmp)] // -1 is written as is, never computed
+            let none = bounds.no_limit && v == -1.0;
+            if !(none || (v.is_finite() && bounds.min <= v && v <= bounds.max)) {
                 return Err(moli_i18n::tr!(
                     "pilotes.victron.valeur_refusee",
                     point = topic.key
@@ -606,7 +695,7 @@ fn point(topic: &Topic) -> PointSpec {
     let (kind, unit) = match topic.read {
         Read::Number { unit, .. } => (
             Kind::Numeric {
-                min: topic.write.map(|b| b.min),
+                min: topic.write.map(|b| if b.no_limit { -1.0 } else { b.min }),
                 max: topic.write.map(|b| b.max),
                 step: topic.write.map(|b| b.step),
             },
@@ -619,6 +708,12 @@ fn point(topic: &Topic) -> PointSpec {
             None,
         ),
         Read::OnOff => (Kind::Binary, None),
+        Read::Group(modes) => (
+            Kind::Enum {
+                values: modes.iter().map(|(n, _, _)| (*n).into()).collect(),
+            },
+            None,
+        ),
     };
     // Every write is a machine command: never run unattended.
     let semantic = if topic.write.is_some() {
@@ -940,6 +1035,66 @@ mod tests {
             encode(min, &Value::Float(5.0)).is_err(),
             "below 10 % protects nothing"
         );
+        let setpoint = find("settings", "Settings/CGwacs/AcPowerSetPoint").unwrap();
+        assert_eq!(
+            encode(setpoint, &Value::Float(-50.0)).unwrap(),
+            r#"{"value":-50.0}"#
+        );
+        assert!(encode(setpoint, &Value::Float(20_000.0)).is_err());
+    }
+
+    #[test]
+    fn ess_modes_write_the_first_code_and_read_the_others() {
+        let mode = find("settings", "Settings/CGwacs/BatteryLife/State").unwrap();
+        for (code, name) in [
+            (1, "optimized_batterylife"),
+            (5, "optimized_batterylife"),
+            (9, "keep_charged"),
+            (10, "optimized"),
+            (11, "optimized"),
+        ] {
+            assert_eq!(
+                decode(mode.read, format!(r#"{{"value":{code}}}"#).as_bytes()),
+                Some(Value::Text(name.into())),
+                "{code}"
+            );
+        }
+        assert_eq!(decode(mode.read, br#"{"value":0}"#), Some(Value::Null));
+        assert_eq!(
+            encode(mode, &Value::Text("optimized_batterylife".into())).unwrap(),
+            r#"{"value":1}"#
+        );
+        assert_eq!(
+            encode(mode, &Value::Text("optimized".into())).unwrap(),
+            r#"{"value":10}"#
+        );
+        assert_eq!(
+            encode(mode, &Value::Text("keep_charged".into())).unwrap(),
+            r#"{"value":9}"#
+        );
+        assert!(encode(mode, &Value::Text("external".into())).is_err());
+    }
+
+    #[test]
+    fn power_limits_take_minus_one_for_none() {
+        let charge = find("settings", "Settings/CGwacs/MaxChargePower").unwrap();
+        assert_eq!(
+            encode(charge, &Value::Float(-1.0)).unwrap(),
+            r#"{"value":-1.0}"#
+        );
+        assert_eq!(
+            encode(charge, &Value::Float(2500.0)).unwrap(),
+            r#"{"value":2500.0}"#
+        );
+        assert!(encode(charge, &Value::Float(-0.5)).is_err());
+        assert!(encode(charge, &Value::Float(-2.0)).is_err());
+        assert!(encode(charge, &Value::Float(20_000.0)).is_err());
+        match point(charge).kind {
+            Kind::Numeric { min, max, .. } => {
+                assert_eq!((min, max), (Some(-1.0), Some(10_000.0)));
+            }
+            other => panic!("{other:?}"),
+        }
     }
 
     #[test]

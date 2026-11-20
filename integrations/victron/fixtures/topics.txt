@@ -20,6 +20,10 @@ N/aabbccddee01/grid/50/Ac/Power {"value":3202.71}
 N/aabbccddee01/pvinverter/51/Ac/Energy/Forward {"value":113.22}
 N/aabbccddee01/pvinverter/51/Ac/Power {"value":279.56}
 N/aabbccddee01/settings/0/Settings/CGwacs/BatteryLife/MinimumSocLimit {"max":100.0,"min":0.0,"value":50.0}
+N/aabbccddee01/settings/0/Settings/CGwacs/BatteryLife/State {"value":11}
+N/aabbccddee01/settings/0/Settings/CGwacs/AcPowerSetPoint {"max":1000000.0,"min":-1000000.0,"value":0.0}
+N/aabbccddee01/settings/0/Settings/CGwacs/MaxChargePower {"max":1000000.0,"min":-1.0,"value":2500.0}
+N/aabbccddee01/settings/0/Settings/CGwacs/MaxDischargePower {"max":1000000.0,"min":-1.0,"value":-1.0}
 N/aabbccddee01/solarcharger/289/History/Daily/0/Yield {"value":0.07999999821186066}
 N/aabbccddee01/solarcharger/289/Pv/V {"value":83.29000091552734}
 N/aabbccddee01/solarcharger/289/State {"value":252}

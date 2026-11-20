@@ -18,10 +18,11 @@
   import { isAlarm } from './lib/alarm.js';
   import Energie from './pages/Energie.svelte';
   import Impression from './pages/Impression.svelte';
-  import Borne from './pages/Borne.svelte';
+  import RechargeBatterie from './pages/RechargeBatterie.svelte';
   import Performance from './pages/Performance.svelte';
   import Pac from './pages/Pac.svelte';
   import { isEvCharger } from './lib/evcharger.js';
+  import { installations } from './lib/victron-battery.js';
   import Dehors from './pages/Dehors.svelte';
   import Chauffage from './pages/Chauffage.svelte';
   import Moli from './pages/Moli.svelte';
@@ -67,7 +68,7 @@
     { path: 'pac', label: 'commun.nav.pac', icon: 'fire', shown: () => !!home.config?.heatpump?.device },
     { path: 'chauffage', label: 'commun.nav.chauffage', icon: 'fire', shown: () => Object.values(hub.devices).some((d) => deviceKind(d) === 'heating') },
     { path: 'impression', label: 'commun.nav.impression', icon: 'printer3d' },
-    { path: 'borne', label: 'commun.nav.borne', icon: 'ev-station', shown: () => Object.values(hub.devices).some(isEvCharger) },
+    { path: 'recharge-batterie', label: 'commun.nav.recharge_batterie', icon: 'ev-station', shown: () => Object.values(hub.devices).some(isEvCharger) || installations(Object.values(hub.devices)).length > 0 },
     { path: 'dehors', label: 'commun.nav.dehors', icon: 'flower-outline' },
     { path: 'automatismes', label: 'commun.nav.automatismes', icon: 'robot' },
     { path: 'infra', label: 'commun.nav.infra', icon: 'server' },
@@ -127,6 +128,10 @@
   }
 
   const page = $derived(route.split('/')[0] ?? '');
+  // The page was « Borne » before the battery joined it: old links follow.
+  $effect(() => {
+    if (page === 'borne') location.replace(`#/${route.replace(/^borne/, 'recharge-batterie')}`);
+  });
 </script>
 
 <div class="maison" data-theme={theme}>
@@ -190,8 +195,8 @@
       <Pac />
     {:else if page === 'performance'}
       <Performance />
-    {:else if page === 'borne'}
-      <Borne />
+    {:else if page === 'recharge-batterie'}
+      <RechargeBatterie />
     {:else if page === 'impression'}
       <Impression />
     {:else if page === 'dehors'}
