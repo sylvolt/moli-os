@@ -1,5 +1,5 @@
 <script>
-  import { value, act, nameOf, since, relative, home } from '../lib/home.svelte.js';
+  import { value, act, nameOf, since, relative, home, device } from '../lib/home.svelte.js';
   import { canWrite } from '../lib/capabilities.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
@@ -8,6 +8,8 @@
    *  orders its points allow (mow or stop, pause or resume, back to its
    *  dock). Each button shows only where its point can be written. */
   let { id } = $props();
+
+  const dev = $derived(device(id));
 
   const state = $derived(value(id, 'state'));
   const battery = $derived(value(id, 'battery'));
@@ -44,19 +46,19 @@
   {/if}
 
   <div class="actions">
-    {#if canWrite(id, 'mow')}
+    {#if canWrite(dev, 'mow')}
       {#if !mowing}
         <button class="main" onclick={() => act(`${id}/mow`, true, t('maison.tondeuse.tondre'))}><Icon name="play" size={18} />{t('maison.tondeuse.tondre')}</button>
-      {:else if canWrite(id, 'pause') && !paused}
+      {:else if canWrite(dev, 'pause') && !paused}
         <button class="main" onclick={() => act(`${id}/pause`, true, t('maison.tondeuse.pause'))}><Icon name="pause" size={18} />{t('maison.tondeuse.pause')}</button>
-      {:else if canWrite(id, 'pause') && paused}
+      {:else if canWrite(dev, 'pause') && paused}
         <button class="main" onclick={() => act(`${id}/pause`, false, t('maison.tondeuse.reprendre'))}><Icon name="play" size={18} />{t('maison.tondeuse.reprendre')}</button>
       {/if}
       {#if mowing}
         <button onclick={() => act(`${id}/mow`, false, t('maison.tondeuse.arreter'))}><Icon name="stop" size={18} />{t('maison.tondeuse.arreter')}</button>
       {/if}
     {/if}
-    {#if canWrite(id, 'dock') && state !== 'docked' && state !== 'returning'}
+    {#if canWrite(dev, 'dock') && state !== 'docked' && state !== 'returning'}
       <button onclick={() => act(`${id}/dock`, true, t('maison.tondeuse.retour_base'))}><Icon name="home" size={18} />{t('maison.tondeuse.retour_base')}</button>
     {/if}
   </div>
