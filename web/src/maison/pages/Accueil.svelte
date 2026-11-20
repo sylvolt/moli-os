@@ -165,6 +165,9 @@
   // view needs a person, as on the cameras page). Elsewhere, or when the
   // live view fails, its images every 15 s.
   const atHome = $derived(!['access', 'outside'].includes(hub.session?.via));
+  // Away from home too where the house opened its cameras' WebRTC port
+  // (home.json `live_outside`).
+  const liveHere = $derived(atHome || cfg.live_outside === true);
   let noLive = $state(null);
   // Live only while someone looks: the page shown, and a touch, a click, a
   // key or a scroll in the last 2 minutes (a wall tablet left alone, a
@@ -200,7 +203,7 @@
   });
   const liveShown = $derived(
     !!shown &&
-      atHome &&
+      liveHere &&
       pageShown &&
       !idle &&
       !!hub.devices[shown.id]?.live &&
