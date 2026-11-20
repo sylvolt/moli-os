@@ -367,6 +367,54 @@
     padding: 8px 0;
   }
 
+  /* A screen of little height (a tablet on its side: 800 px): the rail
+     tightens, and scrolls if it still does not fit, so Système stays
+     reachable. */
+  .rail {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  @media (min-width: 761px) and (max-height: 960px) {
+    .rail {
+      padding: 12px 0 10px;
+      gap: 6px;
+    }
+
+    .brand svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .rail ul {
+      margin-top: 4px;
+      gap: 0;
+    }
+
+    .rail a,
+    .rail button {
+      gap: 2px;
+      padding: 4px 0;
+    }
+
+    .rail .glyph {
+      height: 28px;
+    }
+
+    .label {
+      font-size: 11px;
+    }
+
+    .rail-foot {
+      gap: 0;
+    }
+
+    .rail-foot a,
+    .rail-foot button {
+      padding: 4px 0;
+    }
+  }
+
   .content {
     padding: 28px 36px 120px 8px;
     max-width: 1440px;
