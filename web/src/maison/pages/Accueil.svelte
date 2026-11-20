@@ -187,7 +187,7 @@
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => (idle = true), LIVE_IDLE);
   }
-  // A tablet on its side (lib/layout.js): the door goes in the glance column.
+  // A tablet on its side (lib/layout.js): outside goes in the glance column.
   let panel = $state(false);
   onMount(() => {
     const q = window.matchMedia(PANEL);
@@ -278,6 +278,25 @@
       </section>
 {/snippet}
 
+{#snippet outside()}
+    <a class="card outside" href="#/dehors">
+      <div class="card-head"><h2><Icon name="flower-outline" size={18} />{t('maison.accueil.dehors')}</h2><span class="more" aria-hidden="true"><Icon name="arrow-top-right" size={18} /></span></div>
+      <div class="facts">
+        {#if outTemp}
+          <div><small>{t('maison.accueil.temperature')}</small><b class="num">{outTemp.value != null ? `${num(outTemp.value, 1)}°` : '—'}</b></div>
+        {/if}
+        {#if out.air}
+          <div><small>{t('maison.accueil.air')}</small><b>{aqiWord}</b></div>
+          <div><small>UV</small><b class="num">{num(value(out.air, 'uv_index'), 0)}</b></div>
+        {/if}
+        <div><small>{t('maison.accueil.humidite')}</small><b class="num">{value(out.weather, 'humidity') != null ? `${num(value(out.weather, 'humidity'))} %` : '—'}</b></div>
+        {#if out.pool}
+          <div><small>{t('maison.accueil.piscine')}</small><b class="num">{value(out.pool, 'temperature') != null ? `${num(value(out.pool, 'temperature'), 1)}°` : '—'}</b></div>
+        {/if}
+      </div>
+    </a>
+{/snippet}
+
 <div class="accueil">
   <!-- The glance: the hour, the weather, the mode, what to know. Above the
        cards, or beside them on a tablet on its side. -->
@@ -307,8 +326,8 @@
       <span class="chip good"><Icon name="leaf" size={16} />{t('maison.accueil.calme')}</span>
     {/each}
   </section>
-  <!-- A wall panel: the door, always in view under the weather. -->
-  {#if bell && panel}{@render doorbell()}{/if}
+  <!-- A wall panel: outside, under the weather. -->
+  {#if panel}{@render outside()}{/if}
   </div>
 
   <div class="grid">
@@ -375,7 +394,7 @@
       <div class="robot-slot"><VacuumCard id={robot.id} /></div>
     {/each}
 
-    {#if bell && !panel}{@render doorbell()}{/if}
+    {#if bell}{@render doorbell()}{/if}
 
     {#if cfg.salon?.tv}
     <a class="card remote" href="#/salon">
@@ -391,22 +410,7 @@
     </a>
     {/if}
 
-    <a class="card outside" href="#/dehors">
-      <div class="card-head"><h2><Icon name="flower-outline" size={18} />{t('maison.accueil.dehors')}</h2><span class="more" aria-hidden="true"><Icon name="arrow-top-right" size={18} /></span></div>
-      <div class="facts">
-        {#if outTemp}
-          <div><small>{t('maison.accueil.temperature')}</small><b class="num">{outTemp.value != null ? `${num(outTemp.value, 1)}°` : '—'}</b></div>
-        {/if}
-        {#if out.air}
-          <div><small>{t('maison.accueil.air')}</small><b>{aqiWord}</b></div>
-          <div><small>UV</small><b class="num">{num(value(out.air, 'uv_index'), 0)}</b></div>
-        {/if}
-        <div><small>{t('maison.accueil.humidite')}</small><b class="num">{value(out.weather, 'humidity') != null ? `${num(value(out.weather, 'humidity'))} %` : '—'}</b></div>
-        {#if out.pool}
-          <div><small>{t('maison.accueil.piscine')}</small><b class="num">{value(out.pool, 'temperature') != null ? `${num(value(out.pool, 'temperature'), 1)}°` : '—'}</b></div>
-        {/if}
-      </div>
-    </a>
+    {#if !panel}{@render outside()}{/if}
   </div>
 </div>
 
@@ -827,9 +831,57 @@
       flex-wrap: wrap;
     }
 
-    .glance .doorbell {
+    .glance .outside {
+      display: block;
       grid-column: auto;
-      grid-row: auto;
+    }
+
+    /* The device tiles, smaller: three a row. */
+    .accueil .tiles,
+    .accueil .switches .tiles {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .accueil .tiles :global(.hit) {
+      min-height: 0;
+      padding: 10px 12px 12px;
+      gap: 6px 8px;
+    }
+
+    .accueil .tiles :global(.bulb) {
+      width: 34px;
+      height: 34px;
+    }
+
+    .accueil .tiles :global(.bulb svg) {
+      width: 18px;
+      height: 18px;
+    }
+
+    .accueil .tiles :global(.switch) {
+      top: 14px;
+      right: 12px;
+      width: 34px;
+      height: 20px;
+    }
+
+    .accueil .tiles :global(.switch i) {
+      width: 14px;
+      height: 14px;
+    }
+
+    .accueil .tiles :global(.text b) {
+      font-size: 14px;
+    }
+
+    .accueil .tiles :global(.text small) {
+      font-size: 12px;
+    }
+
+    .glance .facts {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
     .accueil .grid {
