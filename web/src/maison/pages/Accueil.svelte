@@ -18,6 +18,7 @@
   import ScenePicker from '../ui/ScenePicker.svelte';
   import Routines from '../ui/Routines.svelte';
   import SkyHero from '../ui/SkyHero.svelte';
+  import { PANEL } from '../lib/layout.js';
 
   const cfg = $derived(home.config ?? {});
   const out = $derived(cfg.outdoor ?? {});
@@ -186,6 +187,15 @@
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => (idle = true), LIVE_IDLE);
   }
+  // A tablet on its side (lib/layout.js): the door goes in the glance column.
+  let panel = $state(false);
+  onMount(() => {
+    const q = window.matchMedia(PANEL);
+    const change = () => (panel = q.matches);
+    change();
+    q.addEventListener('change', change);
+    return () => q.removeEventListener('change', change);
+  });
   onMount(() => {
     const events = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'];
     const onVisibility = () => {
@@ -232,6 +242,42 @@
   });
 </script>
 
+{#snippet doorbell()}
+      <section class="card doorbell">
+        <div class="card-head">
+          {#if camIdx === 0}
+            <h2><Icon name="bell" size={18} />{t('maison.accueil.devant_porte')}</h2>
+          {:else}
+            <h2><Icon name="cctv" size={18} />{shown.name}</h2>
+          {/if}
+          <a class="more" href="#/cameras" aria-label={t('maison.accueil.toutes_cameras')}><Icon name="arrow-top-right" size={18} /></a>
+        </div>
+        <div class="cam-carousel">
+          <!-- One tile per camera: a load still running for the previous one
+               must not hold back the new one. -->
+          {#key shown.id}
+            {#if liveShown}
+              <div class="cam-live"><LiveVideo id={shown.id} onfail={() => (noLive = shown.id)} /></div>
+            {:else}
+              <CameraTile id={shown.id} name={shown.name} refresh={15} />
+            {/if}
+          {/key}
+          {#if cams.length > 1}
+            <button class="cam-step prev" onclick={() => step(-1)} aria-label={t('maison.accueil.camera_precedente', { nom: cams[(camIdx - 1 + cams.length) % cams.length].name })}>
+              <Icon name="chevron-left" size={22} />
+            </button>
+            <button class="cam-step next" onclick={() => step(1)} aria-label={t('maison.accueil.camera_suivante', { nom: cams[(camIdx + 1) % cams.length].name })}>
+              <Icon name="chevron-right" size={22} />
+            </button>
+            <span class="cam-dots" aria-hidden="true">
+              {#each cams as c, i (c.id)}<span class:on={i === camIdx}></span>{/each}
+            </span>
+          {/if}
+        </div>
+        <p class="muted small">{passage ? t('maison.accueil.dernier_passage', { when: relative(passage, home.now) }) : t('maison.accueil.personne')}</p>
+      </section>
+{/snippet}
+
 <div class="accueil">
   <!-- The glance: the hour, the weather, the mode, what to know. Above the
        cards, or beside them on a tablet on its side. -->
@@ -261,6 +307,8 @@
       <span class="chip good"><Icon name="leaf" size={16} />{t('maison.accueil.calme')}</span>
     {/each}
   </section>
+  <!-- A wall panel: the door, always in view under the weather. -->
+  {#if bell && panel}{@render doorbell()}{/if}
   </div>
 
   <div class="grid">
@@ -327,41 +375,7 @@
       <div class="robot-slot"><VacuumCard id={robot.id} /></div>
     {/each}
 
-    {#if bell}
-      <section class="card doorbell">
-        <div class="card-head">
-          {#if camIdx === 0}
-            <h2><Icon name="bell" size={18} />{t('maison.accueil.devant_porte')}</h2>
-          {:else}
-            <h2><Icon name="cctv" size={18} />{shown.name}</h2>
-          {/if}
-          <a class="more" href="#/cameras" aria-label={t('maison.accueil.toutes_cameras')}><Icon name="arrow-top-right" size={18} /></a>
-        </div>
-        <div class="cam-carousel">
-          <!-- One tile per camera: a load still running for the previous one
-               must not hold back the new one. -->
-          {#key shown.id}
-            {#if liveShown}
-              <div class="cam-live"><LiveVideo id={shown.id} onfail={() => (noLive = shown.id)} /></div>
-            {:else}
-              <CameraTile id={shown.id} name={shown.name} refresh={15} />
-            {/if}
-          {/key}
-          {#if cams.length > 1}
-            <button class="cam-step prev" onclick={() => step(-1)} aria-label={t('maison.accueil.camera_precedente', { nom: cams[(camIdx - 1 + cams.length) % cams.length].name })}>
-              <Icon name="chevron-left" size={22} />
-            </button>
-            <button class="cam-step next" onclick={() => step(1)} aria-label={t('maison.accueil.camera_suivante', { nom: cams[(camIdx + 1) % cams.length].name })}>
-              <Icon name="chevron-right" size={22} />
-            </button>
-            <span class="cam-dots" aria-hidden="true">
-              {#each cams as c, i (c.id)}<span class:on={i === camIdx}></span>{/each}
-            </span>
-          {/if}
-        </div>
-        <p class="muted small">{passage ? t('maison.accueil.dernier_passage', { when: relative(passage, home.now) }) : t('maison.accueil.personne')}</p>
-      </section>
-    {/if}
+    {#if bell && !panel}{@render doorbell()}{/if}
 
     {#if cfg.salon?.tv}
     <a class="card remote" href="#/salon">
@@ -799,6 +813,7 @@
 
     .glance {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       align-content: start;
       gap: 16px;
       position: sticky;
@@ -810,6 +825,11 @@
 
     .modes {
       flex-wrap: wrap;
+    }
+
+    .glance .doorbell {
+      grid-column: auto;
+      grid-row: auto;
     }
 
     .accueil .grid {
