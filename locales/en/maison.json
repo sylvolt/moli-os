@@ -344,6 +344,8 @@
   "maison.tondeuse.accepte": "Order accepted by Navimow, the mower will react…",
   "maison.tondeuse.lent": "Order accepted, but the mower has not moved yet",
   "maison.tondeuse.refuse": "Order not sent (see the message)",
+  "maison.tondeuse.etat.lifted": "Lifted",
+  "maison.tondeuse.souleve": "Lifted or stuck: put it back on the ground and check it before starting it again.",
   "maison.tondeuse.etat.mowing": "Mowing",
   "maison.tondeuse.etat.paused": "Paused",
   "maison.tondeuse.etat.docked": "On its dock",

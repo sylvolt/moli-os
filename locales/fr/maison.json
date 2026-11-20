@@ -344,6 +344,8 @@
   "maison.tondeuse.accepte": "Ordre accepté par Navimow, la tondeuse va réagir…",
   "maison.tondeuse.lent": "Ordre accepté, mais la tondeuse n'a pas encore bougé",
   "maison.tondeuse.refuse": "Ordre non transmis (voir le message)",
+  "maison.tondeuse.etat.lifted": "Soulevée",
+  "maison.tondeuse.souleve": "Soulevée ou bloquée : reposez-la au sol et vérifiez-la sur place avant de la relancer.",
   "maison.tondeuse.etat.mowing": "Tond",
   "maison.tondeuse.etat.paused": "En pause",
   "maison.tondeuse.etat.docked": "Sur sa base",

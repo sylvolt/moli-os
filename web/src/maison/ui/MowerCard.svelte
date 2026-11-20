@@ -18,7 +18,11 @@
   const fault = $derived(value(id, 'fault') === true);
   const changed = $derived(since(id, 'state'));
   const tone = $derived(fault ? 'alert' : state === 'mowing' ? 'good' : state === 'offline' ? '' : 'cool');
-  const word = $derived(t(`maison.tondeuse.etat.${state ?? 'unknown'}`));
+  const detail = $derived(value(id, 'detail'));
+  // Navimow's own words Moli can say better than « en panne ».
+  const lifted = $derived(fault && detail === 'isLifted');
+  const word = $derived(lifted ? t('maison.tondeuse.etat.lifted') : t(`maison.tondeuse.etat.${state ?? 'unknown'}`));
+  const problem = $derived(lifted ? t('maison.tondeuse.souleve') : t('maison.tondeuse.probleme', { detail: detail || '—' }));
 
   // Where the last order is: on its way (Moli waits for Navimow's answer),
   // accepted and waiting for the mower to move, or refused.
@@ -73,7 +77,7 @@
   </div>
 
   {#if fault}
-    <p class="problem"><Icon name="warning" size={16} />{t('maison.tondeuse.probleme', { detail: value(id, 'detail') || '—' })}</p>
+    <p class="problem"><Icon name="warning" size={16} />{problem}</p>
   {/if}
 
   <div class="actions">
@@ -84,7 +88,7 @@
       </button>
     {/snippet}
     {#if canWrite(dev, 'mow')}
-      {#if !mowing}
+      {#if !mowing && !lifted}
         {@render button('mow', true, t('maison.tondeuse.tondre'), 'play', true)}
       {:else if canWrite(dev, 'pause') && !paused}
         {@render button('pause', true, t('maison.tondeuse.pause'), 'pause', true)}
