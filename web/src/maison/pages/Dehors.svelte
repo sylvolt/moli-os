@@ -1,9 +1,10 @@
 <script>
-  import { home, value, num, isOn, reachable, device, since, nameOf, relative } from '../lib/home.svelte.js';
+  import { home, hub, value, num, isOn, reachable, device, since, nameOf, relative, deviceKind, hidden } from '../lib/home.svelte.js';
   import { OUTSIDE, idsOf, pick, originOf, measures, compass } from '../lib/outside.js';
   import { weatherOf } from '../lib/icons.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
+  import MowerCard from '../ui/MowerCard.svelte';
   import LightTile from '../ui/LightTile.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
 
@@ -112,6 +113,8 @@
     if (!Number.isFinite(rise) || !Number.isFinite(set)) return null;
     return Math.min(1, Math.max(0, (home.now - rise) / (set - rise)));
   });
+  // Robotic mowers (the navimow driver): one card each.
+  const mowers = $derived(Object.values(hub.devices ?? {}).filter((d) => deviceKind(d) === 'mower' && !hidden(d.id)).map((d) => d.id));
 </script>
 
 {#snippet badge(key)}
@@ -192,6 +195,10 @@
         {/each}
       </section>
     {/if}
+
+    {#each mowers as m (m)}
+      <MowerCard id={m} />
+    {/each}
 
     {#if pool}
       <section class="card">

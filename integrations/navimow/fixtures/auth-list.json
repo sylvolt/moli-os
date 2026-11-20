@@ -1,0 +1,19 @@
+{
+ "code": 1,
+ "desc": "success",
+ "data": {
+  "payload": {
+   "agentUserId": "user-0000",
+   "devices": [
+    {
+     "id": "NV0000000000001",
+     "type": "action.devices.types.MOWER",
+     "traits": ["action.devices.traits.StartStop", "action.devices.traits.Dock", "action.devices.traits.EnergyStorage"],
+     "name": {"name": "Tondeuse"},
+     "willReportState": true,
+     "deviceInfo": {"manufacturer": "Segway Navimow", "model": "i105E", "swVersion": "1.0.0"}
+    }
+   ]
+  }
+ }
+}

@@ -603,5 +603,19 @@
   "systeme.tablette.tenue_epinglee": "Moli est épinglée à l'écran.",
   "systeme.tablette.tenue_libre": "On peut quitter Moli pour une autre appli.",
   "systeme.tablette.epingler": "Épingler Moli",
-  "systeme.tablette.sortir": "Sortir de Moli pour l'entretien"
+  "systeme.tablette.sortir": "Sortir de Moli pour l'entretien",
+  "systeme.navimow.titre": "Navimow (tondeuse robot)",
+  "systeme.navimow.connecte": "Compte Navimow connecté : Moli suit la tondeuse et peut la commander.",
+  "systeme.navimow.a_connecter": "Connecte ton compte Navimow pour que Moli suive et commande ta tondeuse.",
+  "systeme.navimow.erreur": "Navimow ne répond pas pour le moment : Moli réessaie tout seul.",
+  "systeme.navimow.connexion": "Connexion à Navimow…",
+  "systeme.navimow.etape1": "Ouvre la page de connexion Navimow.",
+  "systeme.navimow.ouvrir": "Ouvrir la page Navimow",
+  "systeme.navimow.etape2": "Connecte-toi avec le compte de l'appli Navimow. Tout se passe chez Navimow.",
+  "systeme.navimow.etape3": "À la fin, le navigateur arrive sur une page « my.home-assistant.io » (ou sur ton Home Assistant). Copie l'adresse complète de la barre d'adresse et colle-la ci-dessous.",
+  "systeme.navimow.coller": "Adresse de fin de connexion",
+  "systeme.navimow.connecter": "Connecter",
+  "systeme.navimow.verification": "Connexion…",
+  "systeme.navimow.aide": "Moli ne voit jamais ton mot de passe : il garde seulement un jeton chiffré dans son coffre, renouvelé tout seul.",
+  "systeme.navimow.passerelle": "Navimow n'ouvre son interface qu'à son intégration Home Assistant officielle : Moli s'y connecte de la même façon, ce qui peut changer sans prévenir."
 }

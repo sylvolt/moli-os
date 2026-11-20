@@ -1,0 +1,38 @@
+[integration]
+id = "navimow"
+name = "Segway Navimow : tondeuses robots (état, batterie, tondre, pause, retour à la base)"
+brands = ["Segway", "Navimow"]
+# Built from the official Home Assistant integration's API; a real account not yet read: see the README.
+models = ["Navimow i105 (attendu)"]
+transport = "https"
+driver = "navimow"
+crate = "moli-navimow"
+
+[discovery]
+# No discovery: a cloud service, the person's own account.
+mdns = []
+ssdp = []
+ports = [443]
+
+[needs]
+# `session` (the tokens) is written by the driver once the account is signed in from the dashboard.
+secrets = []
+vars = []
+options = []
+
+[origin]
+reused = "aucun code repris : adresses, client OAuth et formes des réponses lus dans l'intégration Home Assistant officielle segwaynavimow/NavimowHA (const.py, auth.py) et dans le SDK segwaynavimow/navimow-sdk (api.py, models.py, GPL-3.0, lu comme référence) ; l'API suit le schéma Smart Home de Google (SYNC, QUERY, EXECUTE) ; fixtures reconstituées à la main"
+author = "agent"
+
+# Replayed by the crate's tests (crates/moli-navimow/src/model.rs). Reconstructed, not captured.
+[[fixture]]
+file = "fixtures/auth-list.json"
+
+[[fixture]]
+file = "fixtures/vehicle-status.json"
+
+[[fixture]]
+file = "fixtures/vehicle-status-offline.json"
+
+[[fixture]]
+file = "fixtures/send-commands.json"

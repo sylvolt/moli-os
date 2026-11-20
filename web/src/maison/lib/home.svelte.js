@@ -273,6 +273,7 @@ export function deviceKind(d) {
   if (d.camera) return 'camera';
   const known = knownDeviceKind(d);
   if (known) return known;
+  if (has(d, 'mow') && has(d, 'dock') && has(d, 'battery')) return 'mower';
   if (has(d, 'clean') && has(d, 'battery')) return 'vacuum';
   // A heat pump, or a heating circuit (the three set points a thermostat or a valve never has together).
   if (has(d, 'compressor_active') || (has(d, 'mode', true) && has(d, 'comfort_temperature') && has(d, 'reduced_temperature'))) return 'heating';

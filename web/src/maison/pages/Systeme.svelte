@@ -8,6 +8,7 @@
   import Rules from '../moli/Rules.svelte';
   import AlexaAccount from '../ui/AlexaAccount.svelte';
   import EngieAccount from '../ui/EngieAccount.svelte';
+  import NavimowAccount from '../ui/NavimowAccount.svelte';
   import DashboardCode from '../ui/DashboardCode.svelte';
   import WallCard from '../ui/WallCard.svelte';
   import PeopleCard from '../ui/PeopleCard.svelte';
@@ -190,6 +191,8 @@
   <AlexaAccount />
 
   <EngieAccount />
+
+  <NavimowAccount />
 
   <TuyaCloudKeys />
 

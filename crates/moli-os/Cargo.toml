@@ -27,6 +27,7 @@ moli-history.workspace = true
 moli-profile.workspace = true
 moli-enedis.workspace = true
 moli-solcast.workspace = true
+moli-navimow.workspace = true
 moli-linky-tic.workspace = true
 moli-energy.workspace = true
 moli-tuya.workspace = true

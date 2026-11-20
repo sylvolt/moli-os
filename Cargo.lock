@@ -2185,6 +2185,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "moli-navimow"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "http",
+ "http-body-util",
+ "moli-core",
+ "moli-i18n",
+ "moli-net",
+ "moli-runtime",
+ "ring",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "moli-net"
 version = "0.1.0"
 dependencies = [
@@ -2244,6 +2262,7 @@ dependencies = [
  "moli-matter",
  "moli-melcloud",
  "moli-moonraker",
+ "moli-navimow",
  "moli-net",
  "moli-outdoor",
  "moli-overkiz",

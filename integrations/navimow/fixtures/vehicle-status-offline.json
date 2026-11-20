@@ -1,0 +1,5 @@
+{
+ "code": 1,
+ "desc": "success",
+ "data": {"payload": {"devices": [{"id": "NV0000000000001", "online": false, "vehicleState": "isDocked", "capacityRemaining": [{"rawValue": 100, "unit": "PERCENTAGE"}]}]}}
+}

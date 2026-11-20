@@ -1348,6 +1348,7 @@ const KINDS: &[&str] = &[
     "kasa",
     "recycleapp",
     "engie",
+    "navimow",
     "tapo",
     "lifx",
     "matter",
@@ -1588,6 +1589,7 @@ fn build_driver(
             config.options.clone().try_into().with_context(context)?,
         )),
         "solcast" => configured_driver(config, moli_solcast::Solcast::new)?,
+        "navimow" => configured_driver(config, moli_navimow::Navimow::new)?,
         "vicare" => Arc::new(moli_vicare::Vicare::new(
             config.options.clone().try_into().with_context(context)?,
         )),

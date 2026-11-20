@@ -1,0 +1,17 @@
+{
+ "code": 1,
+ "desc": "success",
+ "data": {
+  "payload": {
+   "devices": [
+    {
+     "id": "NV0000000000001",
+     "online": true,
+     "vehicleState": "isRunning",
+     "descriptiveCapacityRemaining": "MEDIUM",
+     "capacityRemaining": [{"rawValue": 64, "unit": "PERCENTAGE"}]
+    }
+   ]
+  }
+ }
+}

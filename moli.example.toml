@@ -255,6 +255,15 @@ base_topic = "zigbee2mqtt"
 # calls_per_day = 10            # a free home user account
 # timezone = "Europe/Paris"
 
+# Segway Navimow robotic mowers, through Navimow's cloud. Signed in from the dashboard (System → Navimow
+# account); needs the master key (the session is kept in the vault). See integrations/navimow/onboarding.md.
+# [[driver]]
+# id = "navimow"
+# kind = "navimow"
+#
+# [driver.options]
+# poll_secs = 30
+
 # Moli, l'assistant (API compatible OpenAI). Clé : <source> | moli-os secrets set assistant api_key
 # [assistant]
 # model = "gpt-4.1-mini"

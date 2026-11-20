@@ -603,5 +603,19 @@
   "systeme.tablette.tenue_epinglee": "Moli is pinned to the screen.",
   "systeme.tablette.tenue_libre": "Moli can be left for another app.",
   "systeme.tablette.epingler": "Pin Moli",
-  "systeme.tablette.sortir": "Leave Moli for upkeep"
+  "systeme.tablette.sortir": "Leave Moli for upkeep",
+  "systeme.navimow.titre": "Navimow (robot mower)",
+  "systeme.navimow.connecte": "Navimow account connected: Moli follows the mower and can drive it.",
+  "systeme.navimow.a_connecter": "Connect your Navimow account so that Moli follows and drives your mower.",
+  "systeme.navimow.erreur": "Navimow does not answer for now: Moli tries again by itself.",
+  "systeme.navimow.connexion": "Connecting to Navimow…",
+  "systeme.navimow.etape1": "Open Navimow's sign-in page.",
+  "systeme.navimow.ouvrir": "Open the Navimow page",
+  "systeme.navimow.etape2": "Sign in with the Navimow app's account. It all happens at Navimow's.",
+  "systeme.navimow.etape3": "At the end, the browser lands on a « my.home-assistant.io » page (or on your Home Assistant). Copy the whole address from the address bar and paste it below.",
+  "systeme.navimow.coller": "Sign-in end address",
+  "systeme.navimow.connecter": "Connect",
+  "systeme.navimow.verification": "Connecting…",
+  "systeme.navimow.aide": "Moli never sees your password: it only keeps an encrypted token in its vault, renewed by itself.",
+  "systeme.navimow.passerelle": "Navimow opens its interface to its official Home Assistant integration only: Moli connects the same way, which may change without notice."
 }
