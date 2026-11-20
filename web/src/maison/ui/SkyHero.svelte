@@ -13,6 +13,7 @@
   import Icon from './Icon.svelte';
   import WeatherMap from './WeatherMap.svelte';
   import SkyDetail from './SkyDetail.svelte';
+  import { PANEL } from '../lib/layout.js';
 
   const out = $derived(home.config?.outdoor ?? {});
   const w = $derived(out.weather);
@@ -32,7 +33,8 @@
   });
 
   onMount(() => {
-    const phone = window.matchMedia('(max-width: 760px)');
+    // A phone, or the glance column of a wall panel: the map stays narrow.
+    const phone = window.matchMedia(`(max-width: 760px), ${PANEL}`);
     narrow = phone.matches;
     const change = () => (narrow = phone.matches);
     phone.addEventListener('change', change);
@@ -219,6 +221,58 @@
       border-radius: var(--r-lg);
       -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 28%), linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
       mask-image: linear-gradient(90deg, transparent 0%, #000 28%), linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+    }
+  }
+  /* A wall panel: the glance is a column; the hour first, large. Same query
+     as PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .hero {
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      padding: 0;
+    }
+
+    .hello {
+      align-self: start;
+      display: grid;
+    }
+
+    .time {
+      order: -1;
+      font-size: 76px;
+      font-weight: 300;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: var(--ink);
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      margin-top: 6px;
+    }
+
+    .date {
+      order: 1;
+    }
+
+    .sky {
+      flex: none;
+      min-width: 0;
+      min-height: 150px;
+      margin: 0 -4px;
+    }
+
+    .space {
+      border-radius: var(--r-lg);
+      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 28%), linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+      mask-image: linear-gradient(90deg, transparent 0%, #000 28%), linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+    }
+
+    .words strong {
+      font-size: 40px;
     }
   }
 </style>

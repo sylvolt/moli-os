@@ -233,6 +233,9 @@
 </script>
 
 <div class="accueil">
+  <!-- The glance: the hour, the weather, the mode, what to know. Above the
+       cards, or beside them on a tablet on its side. -->
+  <div class="glance">
   <SkyHero />
 
   {#if modes.length}
@@ -258,6 +261,7 @@
       <span class="chip good"><Icon name="leaf" size={16} />{t('maison.accueil.calme')}</span>
     {/each}
   </section>
+  </div>
 
   <div class="grid">
     {#if switches.length}
@@ -396,6 +400,10 @@
   .accueil {
     display: grid;
     gap: 22px;
+  }
+
+  .glance {
+    display: contents;
   }
 
   .modes {
@@ -777,6 +785,58 @@
 
     .clims {
       grid-template-columns: 1fr;
+    }
+  }
+  /* A tablet on its side (a wall panel: about 1280 × 800): the glance becomes
+     a column that stays in view, the cards go two by two beside it. Same
+     query as PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .accueil {
+      grid-template-columns: minmax(250px, 290px) minmax(0, 1fr);
+      align-items: start;
+      gap: 20px 24px;
+    }
+
+    .glance {
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      position: sticky;
+      top: 12px;
+      max-height: calc(100dvh - 24px);
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .modes {
+      flex-wrap: wrap;
+    }
+
+    .accueil .grid {
+      display: block;
+      columns: 300px 2;
+      column-gap: 18px;
+    }
+
+    .accueil .grid > * {
+      width: 100%;
+      margin: 0 0 18px;
+      break-inside: avoid;
+    }
+
+    :where(.accueil .grid) > :where(a) {
+      display: block;
+    }
+
+    /* The energy column, one block, would leave the other column half
+       empty: its cards share the two columns like the others. */
+    .accueil .side {
+      display: contents;
+    }
+
+    .accueil .side > :global(*) {
+      margin: 0 0 18px;
+      break-inside: avoid;
     }
   }
 </style>

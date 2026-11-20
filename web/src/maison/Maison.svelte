@@ -413,6 +413,17 @@
     .rail-foot button {
       padding: 4px 0;
     }
+
+    /* On a low screen the words would cover the cards: the orb alone. */
+    .orb {
+      right: 20px;
+      bottom: 20px;
+      padding: 8px;
+    }
+
+    .orb-text {
+      display: none;
+    }
   }
 
   .content {
