@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { home, hub, value, device, isOn, clock, num, relative, lastSeen, roomList, lampsOf, nameOf, doorOpen, leak, lowBattery, deviceKind, hidden, act, pending } from '../lib/home.svelte.js';
+  import { home, hub, value, device, isOn, clock, num, relative, lastSeen, roomList, lampsOf, nameOf, doorOpen, leak, lowBattery, deviceKind, hidden, act, pending, roomOf, protectedRoom } from '../lib/home.svelte.js';
   import { isPrinter, phase } from '../lib/printers.js';
   import { isValve } from '../lib/capabilities.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
@@ -13,6 +13,7 @@
   import EnergyFlow from '../ui/EnergyFlow.svelte';
   import HistoryChart from '../ui/HistoryChart.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
+  import LiveVideo from '../ui/LiveVideo.svelte';
   import AmbiancePicker from '../ui/AmbiancePicker.svelte';
   import ScenePicker from '../ui/ScenePicker.svelte';
   import Routines from '../ui/Routines.svelte';
@@ -159,6 +160,53 @@
   const BACK_TO_DOOR = 120_000;
   let camIdx = $state(0);
   const shown = $derived(cams[camIdx] ?? bell);
+  // The camera shown plays live (WebRTC, straight from the camera) where
+  // this browser reaches it: at home, never for a protected room (its live
+  // view needs a person, as on the cameras page). Elsewhere, or when the
+  // live view fails, its images every 15 s.
+  const atHome = $derived(!['access', 'outside'].includes(hub.session?.via));
+  let noLive = $state(null);
+  // Live only while someone looks: the page shown, and a touch, a click, a
+  // key or a scroll in the last 2 minutes (a wall tablet left alone, a
+  // forgotten tab, decode nothing). Back to images then; any gesture, or the
+  // screen waking, plays it again.
+  const LIVE_IDLE = 2 * 60_000;
+  let pageShown = $state(typeof document === 'undefined' || document.visibilityState === 'visible');
+  let idle = $state(false);
+  let idleTimer;
+  let lastGesture = 0;
+  function gesture() {
+    const now = Date.now();
+    if (!idle && now - lastGesture < 2000) return; // pointer moves come by the dozen
+    lastGesture = now;
+    idle = false;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => (idle = true), LIVE_IDLE);
+  }
+  onMount(() => {
+    const events = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'];
+    const onVisibility = () => {
+      pageShown = document.visibilityState === 'visible';
+      if (pageShown) gesture();
+    };
+    for (const e of events) window.addEventListener(e, gesture, { passive: true, capture: true });
+    document.addEventListener('visibilitychange', onVisibility);
+    gesture();
+    return () => {
+      clearTimeout(idleTimer);
+      for (const e of events) window.removeEventListener(e, gesture, { capture: true });
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  });
+  const liveShown = $derived(
+    !!shown &&
+      atHome &&
+      pageShown &&
+      !idle &&
+      !!hub.devices[shown.id]?.live &&
+      !protectedRoom(roomOf(hub.devices[shown.id]) ?? '') &&
+      noLive !== shown.id,
+  );
   const step = (by) => (camIdx = (camIdx + by + cams.length) % cams.length);
   $effect(() => {
     if (camIdx === 0) return;
@@ -286,7 +334,11 @@
           <!-- One tile per camera: a load still running for the previous one
                must not hold back the new one. -->
           {#key shown.id}
-            <CameraTile id={shown.id} name={shown.name} refresh={15} />
+            {#if liveShown}
+              <div class="cam-live"><LiveVideo id={shown.id} onfail={() => (noLive = shown.id)} /></div>
+            {:else}
+              <CameraTile id={shown.id} name={shown.name} refresh={15} />
+            {/if}
           {/key}
           {#if cams.length > 1}
             <button class="cam-step prev" onclick={() => step(-1)} aria-label={t('maison.accueil.camera_precedente', { nom: cams[(camIdx - 1 + cams.length) % cams.length].name })}>
@@ -431,6 +483,13 @@
   .doorbell {
     grid-column: span 5;
     grid-row: span 2;
+  }
+
+  .cam-live {
+    border-radius: var(--r-md, 14px);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    background: #000;
   }
 
   .cam-carousel {
