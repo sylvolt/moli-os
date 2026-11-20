@@ -482,4 +482,51 @@
       font-size: 52px;
     }
   }
+  /* A wall panel: the weather on one band (the sky, then its figures), the
+     cameras three a row. Same query as PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .dehors {
+      gap: 16px;
+    }
+
+    .sky {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 0 28px;
+      padding: 16px 22px;
+    }
+
+    .sky-icon {
+      width: 64px;
+      height: 64px;
+    }
+
+    .now {
+      gap: 14px;
+    }
+
+    .temp {
+      font-size: 48px;
+    }
+
+    .label {
+      font-size: 17px;
+    }
+
+    .facts {
+      margin-top: 0;
+      gap: 12px;
+    }
+
+    .sunline {
+      grid-column: 1 / -1;
+      margin-top: 12px;
+    }
+
+    .cams {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+  }
 </style>

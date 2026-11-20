@@ -4,6 +4,7 @@
   import { energy, useEnergy, euros, kwh, watts, power, liveLook, billOf } from '../lib/energy-live.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
+  import { batteryNow } from '../lib/battery.js';
 
   onMount(useEnergy);
 
@@ -40,6 +41,18 @@
       .filter((m) => m.w != null && m.w >= 30)
       .sort((a, b) => b.w - a.w)
       .slice(0, 3),
+  );
+
+  // The home battery: its charge and what it does right now.
+  const battery = $derived(batteryNow(s, current));
+  const batteryWord = $derived(
+    battery?.state === 'charge'
+      ? t('energie.batterie.charge', { w: watts(battery.power) })
+      : battery?.state === 'decharge'
+        ? t('energie.batterie.decharge', { w: watts(-battery.power) })
+        : battery?.state === 'repos'
+          ? t('energie.batterie.repos')
+          : '',
   );
 
   const R = 70;
@@ -89,6 +102,17 @@
       {/if}
       <div><small>{t('energie.span.yesterday')}</small><b class="num">{kwh(yesterday)} kWh</b></div>
     </div>
+    {#if battery}
+      <div class="battery {battery.tone ?? ''} {battery.state ?? ''}">
+        <Icon name="battery" size={18} />
+        <span class="what">{t('energie.batterie.titre')}</span>
+        {#if battery.soc != null}
+          <span class="bar" role="meter" aria-label={t('energie.batterie.charge_pct')} aria-valuenow={Math.round(battery.soc)} aria-valuemin="0" aria-valuemax="100"><i style:width="{battery.soc}%"></i></span>
+          <b class="num">{Math.round(battery.soc)} %</b>
+        {/if}
+        {#if batteryWord}<span class="state">{batteryWord}</span>{/if}
+      </div>
+    {/if}
     {#if top.length}
       <p class="top" aria-label={t('energie.carte.plus_gros')}>
         <span class="muted">{t('energie.now.titre')}</span>
@@ -258,5 +282,61 @@
     position: absolute;
     top: 20px;
     right: 64px;
+  }
+  .battery {
+    display: grid;
+    grid-template-columns: auto auto minmax(40px, 1fr) auto;
+    align-items: center;
+    gap: 4px 10px;
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    color: var(--good);
+    font-size: 14px;
+  }
+
+  .battery.mid {
+    color: var(--warm);
+  }
+
+  .battery.low {
+    color: var(--alert);
+  }
+
+  .battery .what {
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+
+  .battery .bar {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-3);
+    overflow: hidden;
+  }
+
+  .battery .bar i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: currentColor;
+    transition: width 0.6s var(--ease);
+  }
+
+  .battery b {
+    color: var(--ink);
+    font-weight: 650;
+  }
+
+  .battery .state {
+    grid-column: 2 / -1;
+    color: var(--ink-3);
+    font-size: 13px;
+    font-weight: 550;
+  }
+
+  .battery.charge .state {
+    color: var(--good);
   }
 </style>

@@ -46,4 +46,11 @@
     gap: 20px;
     align-items: start;
   }
+  /* A wall panel: the car narrower, the battery (two columns of controls)
+     wider. Same query as PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .grid:has(> :nth-child(2)) {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    }
+  }
 </style>

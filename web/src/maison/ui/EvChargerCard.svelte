@@ -442,4 +442,32 @@
       margin: 0 auto;
     }
   }
+  /* A wall panel: tighter, so the card holds on the screen. Same query as
+     PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .borne {
+      gap: 10px;
+    }
+
+    .head {
+      padding-bottom: 10px;
+    }
+
+    .dial {
+      grid-template-columns: 1fr minmax(120px, 150px) 1fr;
+    }
+
+    .current,
+    .status {
+      padding: 10px 14px;
+    }
+
+    .segmented button {
+      padding: 8px 12px;
+    }
+
+    .startstop {
+      padding: 10px;
+    }
+  }
 </style>

@@ -7,6 +7,7 @@
   import CameraReview from '../ui/CameraReview.svelte';
   import SecurityPanel from '../ui/SecurityPanel.svelte';
   import RecentEvents from '../ui/RecentEvents.svelte';
+  import { PANEL } from '../lib/layout.js';
 
   // The layout's cameras first (their names, pace, battery), then any other.
   const cameras = $derived.by(() => {
@@ -88,12 +89,60 @@
     });
   });
 
+  // A tablet on its side (lib/layout.js): security on one half, a live view
+  // on the other, a tap away from each camera.
+  let panel = $state(false);
+  $effect(() => {
+    const q = window.matchMedia(PANEL);
+    const change = () => (panel = q.matches);
+    change();
+    q.addEventListener('change', change);
+    return () => q.removeEventListener('change', change);
+  });
+  // The camera last chosen on this screen (a wall tablet keeps its own),
+  // else the first after the doorbell (the first favorite, on the home page
+  // already); the others a tap away, under it.
+  const SIDE_KEY = 'moli.cameras.side';
+  let sideId = $state(null);
+  try {
+    sideId = localStorage.getItem(SIDE_KEY);
+  } catch {
+    // No storage here: the default.
+  }
+  function choose(id) {
+    sideId = id;
+    try {
+      localStorage.setItem(SIDE_KEY, id);
+    } catch {
+      // Not kept: chosen for now.
+    }
+  }
+  const side = $derived(
+    cameras.find((c) => c.id === sideId) ?? cameras.slice(1).find((c) => !c.locked) ?? cameras.find((c) => !c.locked) ?? cameras[0],
+  );
+  const sideLive = $derived(
+    !!side && liveHere && !side.locked && !!hub.devices[side.id]?.live && noLive !== side.id && open == null,
+  );
+
   function onkey(e) {
     if (e.key === 'Escape') open = null;
   }
 </script>
 
 <svelte:window onkeydown={onkey} />
+
+{#snippet wall(list)}
+  <div class="wall">
+    {#each list as cam (cam.id)}
+      <div class="slot">
+        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} onopen={(id) => openAt(id)} />
+        {#if cam.locked}<span class="chip cool lock"><Icon name="lock" size={14} />{t('salon.cameras.protegee')}</span>{/if}
+      </div>
+    {:else}
+      <p class="muted">{t('salon.cameras.aucune')}</p>
+    {/each}
+  </div>
+{/snippet}
 
 <div class="cameras">
   <header>
@@ -105,18 +154,35 @@
     <RecentEvents cameras={reviewed} onopen={openAt} />
   {/if}
   <!-- Its switches and its « alarm under way » line stay, under the events. -->
-  <SecurityPanel />
+  {#if panel && side}
+    <div class="duo">
+      <SecurityPanel />
+      <section class="card side-live">
+        <div class="card-head">
+          <h2><Icon name="cctv" size={18} />{side.name}</h2>
+          <button class="more" onclick={() => openAt(side.id)} aria-label={t('salon.camera.agrandir', { nom: side.name })}><Icon name="arrow-top-right" size={18} /></button>
+        </div>
+        {#key side.id}
+          {#if sideLive}
+            <div class="side-video"><LiveVideo id={side.id} onfail={() => (noLive = side.id)} /></div>
+          {:else}
+            <CameraTile id={side.id} name={side.name} refresh={side.battery ? 0 : 5} battery={side.battery} onopen={(id) => openAt(id)} />
+          {/if}
+        {/key}
+        {#if cameras.length > 1}
+          <div class="pick" role="group" aria-label={t('salon.cameras.titre')}>
+            {#each cameras as c (c.id)}
+              <button class:on={c.id === side.id} aria-pressed={c.id === side.id} onclick={() => choose(c.id)}>{c.name}</button>
+            {/each}
+          </div>
+        {/if}
+      </section>
+    </div>
+  {:else}
+    <SecurityPanel />
+  {/if}
 
-  <div class="wall">
-    {#each cameras as cam (cam.id)}
-      <div class="slot">
-        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} onopen={(id) => openAt(id)} />
-        {#if cam.locked}<span class="chip cool lock"><Icon name="lock" size={14} />{t('salon.cameras.protegee')}</span>{/if}
-      </div>
-    {:else}
-      <p class="muted">{t('salon.cameras.aucune')}</p>
-    {/each}
-  </div>
+  {#if !(panel && side)}{@render wall(cameras)}{/if}
 </div>
 
 {#if current}
@@ -288,5 +354,88 @@
 
   .seen .muted {
     color: #a9b1c2;
+  }
+  .duo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .side-live {
+    display: grid;
+    gap: 12px;
+  }
+
+  .side-live .more {
+    border: 0;
+    cursor: pointer;
+  }
+
+  .side-video {
+    aspect-ratio: 16 / 9;
+    max-height: 250px;
+    width: 100%;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: #000;
+  }
+
+  .pick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pick button {
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 14px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .pick button.on {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  /* A wall panel: the two halves low enough to fit under the events. */
+  .duo > :global(.card) {
+    padding: 14px 18px;
+  }
+
+  .duo :global(.security) {
+    gap: 8px;
+  }
+
+  .duo :global(.security .door) {
+    padding: 6px 12px;
+  }
+
+  .duo :global(.security .door .badge) {
+    width: 32px;
+    height: 32px;
+  }
+
+  .duo :global(.security .moves li) {
+    padding: 4px 4px;
+    font-size: 14px;
+  }
+
+  .side-live {
+    gap: 8px;
+  }
+
+  .side-live :global(.frame) {
+    max-height: 250px;
+  }
+
+  .pick button {
+    padding: 5px 12px;
   }
 </style>

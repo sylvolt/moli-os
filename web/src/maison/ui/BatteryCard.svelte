@@ -486,4 +486,48 @@
       transition: none;
     }
   }
+  /* A wall panel: the controls two by two, their explanations left out, so
+     the card holds on the screen. Same query as PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .batterie {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+      gap: 10px 12px;
+      max-width: none;
+    }
+
+    .batterie > :not(.block) {
+      grid-column: 1 / -1;
+    }
+
+    .head {
+      padding-bottom: 10px;
+    }
+
+    .soc-head strong {
+      font-size: 26px;
+    }
+
+    .block {
+      align-self: stretch;
+      align-content: start;
+      gap: 6px;
+      padding: 10px 12px;
+    }
+
+    .help {
+      display: none;
+    }
+
+    .segmented.four {
+      grid-auto-flow: row;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .segmented button {
+      padding: 7px 4px;
+      line-height: 1.2;
+      white-space: normal;
+    }
+  }
 </style>

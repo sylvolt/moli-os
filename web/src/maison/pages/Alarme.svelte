@@ -533,4 +533,16 @@
       transition: none;
     }
   }
+  /* A wall panel: the journal no taller than the sensors beside it. Same
+     query as PANEL in lib/layout.js. */
+  @media (min-width: 761px) and (max-height: 960px) and (orientation: landscape) {
+    .past ul {
+      max-height: 280px;
+    }
+
+    .past li {
+      padding: 4px 0;
+      font-size: 14px;
+    }
+  }
 </style>
