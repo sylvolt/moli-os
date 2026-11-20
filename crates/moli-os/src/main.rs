@@ -1361,6 +1361,7 @@ const KINDS: &[&str] = &[
     "victron",
     "bambu",
     "esphome",
+    "proxmox",
     "alexa",
     "sonos",
     "airplay",
@@ -1604,6 +1605,7 @@ fn build_driver(
         "esphome" => Arc::new(moli_esphome::Esphome::new(
             config.options.clone().try_into().with_context(context)?,
         )),
+        "proxmox" => configured_driver(config, moli_proxmox::Proxmox::new)?,
         "alexa" => Arc::new(moli_alexa::Alexa::new(
             config.options.clone().try_into().with_context(context)?,
         )),
