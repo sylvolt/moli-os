@@ -75,7 +75,7 @@
       <form class="form" onsubmit={(e) => (e.preventDefault(), connect(a.id))} autocomplete="off">
         <label for="navimow-pasted">{t('systeme.navimow.coller')}</label>
         <input id="navimow-pasted" bind:value={pasted} placeholder="https://my.home-assistant.io/redirect/oauth?code=…" spellcheck="false" />
-        <button class="btn primary" disabled={busy || !pasted.includes('code=')}>{busy ? t('systeme.navimow.verification') : t('systeme.navimow.connecter')}</button>
+        <button class="btn primary" disabled={busy || !pasted.trim()}>{busy ? t('systeme.navimow.verification') : t('systeme.navimow.connecter')}</button>
         {#if error}<p class="error">{error}</p>{/if}
       </form>
       <small class="muted">{t('systeme.navimow.aide')}</small>

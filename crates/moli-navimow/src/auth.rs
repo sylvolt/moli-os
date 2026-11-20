@@ -81,15 +81,20 @@ impl SignIn {
     /// address it forwards to, with this sign-in's state.
     pub fn code(&self, pasted: &str) -> Result<String, Pasted> {
         let pasted = pasted.trim();
-        let ends_here = pasted.starts_with(REDIRECT_URI)
+        let ends_here = pasted.starts_with("https://my.home-assistant.io/")
             || (pasted.starts_with("http") && pasted.contains("/auth/external/callback"));
         if !ends_here {
             return Err(Pasted::NotTheEnd);
         }
-        if encode::query_param(pasted, "state").as_deref() != Some(self.state.as_str()) {
+        // Without a Home Assistant of its own to send to, the redirect page
+        // moves to its settings page (`/redirect/_change/`) and carries the
+        // answer inside its `redirect` parameter: `oauth/?code=…&state=…`.
+        let inner = encode::query_param(pasted, "redirect").filter(|r| r.contains("state="));
+        let answer = inner.as_deref().unwrap_or(pasted);
+        if encode::query_param(answer, "state").as_deref() != Some(self.state.as_str()) {
             return Err(Pasted::Stale);
         }
-        encode::query_param(pasted, "code")
+        encode::query_param(answer, "code")
             .filter(|c| !c.is_empty())
             .ok_or(Pasted::NoCode)
     }
@@ -279,6 +284,14 @@ mod tests {
             s.state
         );
         assert_eq!(s.code(&forwarded), Ok("abc123".into()));
+        // Moved to the redirect page's settings: the answer inside `redirect`.
+        let moved = format!(
+            "https://my.home-assistant.io/redirect/_change/?redirect=oauth%2F%3Fcode%3Dq7-x%26state%3D{}",
+            s.state
+        );
+        assert_eq!(s.code(&moved), Ok("q7-x".into()));
+        let moved_other = "https://my.home-assistant.io/redirect/_change/?redirect=oauth%2F%3Fcode%3Dq7%26state%3Dother";
+        assert_eq!(s.code(moved_other), Err(Pasted::Stale));
         assert_eq!(
             s.code("https://navimow-h5-fra.willand.com/smartHome/login?x=1"),
             Err(Pasted::NotTheEnd)
