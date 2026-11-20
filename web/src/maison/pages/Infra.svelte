@@ -6,6 +6,10 @@
   import Gauge from '../ui/infra/Gauge.svelte';
   import Spark from '../ui/infra/Spark.svelte';
   import PcCard from '../ui/infra/PcCard.svelte';
+  import ProxmoxCard from '../ui/infra/ProxmoxCard.svelte';
+  import { proxmoxNodes, proxmoxIssues } from '../lib/proxmox.js';
+  import BoxCard from '../ui/infra/BoxCard.svelte';
+  import { boxIssues, reader } from '../lib/box.js';
 
   /** The house's machines, the digital side of « is everything fine at
    *  home? »: the server (live from Moli), its disks and containers (the host
@@ -33,6 +37,10 @@
   const pcs = $derived(devices.filter((d) => d.model === 'Ordinateur'));
   const box = $derived(devices.find((d) => d.points.some((p) => p.key === 'external_ip')));
   const sv = (k) => (server ? value(server.id, k) : null);
+  // Proxmox nodes (the `proxmox` driver): their parts and their problems.
+  const nodes = $derived(proxmoxNodes(devices));
+  // The internet box, from points named in home.json (`infra.box`).
+  const boxCfg = $derived(home.config?.infra?.box ?? null);
 
   // ---- words and numbers ----
   const GB = 1024 ** 3;
@@ -70,6 +78,8 @@
       else if (home.now - b.at > 36 * 3_600_000) out.push(t('systeme.infra.alerte.sauvegarde_ancienne', { label: b.label, days: Math.round((home.now - b.at) / 86_400_000) }));
     }
     if (server && server.online === false) out.push(t('systeme.infra.alerte.serveur'));
+    for (const g of nodes) out.push(...proxmoxIssues(g, value, (d) => d.label?.name || d.native_name));
+    out.push(...boxIssues(boxCfg, reader(value), t));
     return out;
   });
   const stale = $derived(infra && home.now - infra.ts > 5 * 60_000);
@@ -95,6 +105,10 @@
   {/if}
 
   <div class="grid">
+    {#each nodes as group (group.instance)}
+      <ProxmoxCard {group} />
+    {/each}
+
     {#if server}
       <section class="card server">
         <div class="card-head">
@@ -121,6 +135,7 @@
       </section>
     {/if}
 
+    {#if !(infraMissing && nodes.length)}
     <section class="card">
       <div class="card-head">
         <h2><Icon name="docker" size={18} />{t('systeme.infra.conteneurs')}</h2>
@@ -158,6 +173,7 @@
         {#if stale}<p class="muted small">{t('systeme.infra.releve_ancien', { when: relative(infra.ts, home.now) })}</p>{/if}
       {/if}
     </section>
+    {/if}
 
     {#if infra}
       <section class="card">
@@ -188,6 +204,10 @@
     {#each pcs as pc (pc.id)}
       <PcCard {pc} />
     {/each}
+
+    {#if boxCfg}
+      <BoxCard box={boxCfg} />
+    {/if}
 
     {#if box}
       <section class="card">
