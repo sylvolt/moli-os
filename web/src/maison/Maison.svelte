@@ -370,9 +370,11 @@
   /* A screen of little height (a tablet on its side: 800 px): the rail
      tightens, and scrolls if it still does not fit, so Système stays
      reachable. */
-  .rail {
-    overflow-y: auto;
-    scrollbar-width: none;
+  @media (min-width: 761px) {
+    .rail {
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
   }
 
   @media (min-width: 761px) and (max-height: 960px) {
