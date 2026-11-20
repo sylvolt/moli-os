@@ -19,6 +19,37 @@
   const changed = $derived(since(id, 'state'));
   const tone = $derived(fault ? 'alert' : state === 'mowing' ? 'good' : state === 'offline' ? '' : 'cool');
   const word = $derived(t(`maison.tondeuse.etat.${state ?? 'unknown'}`));
+
+  // Where the last order is: on its way (Moli waits for Navimow's answer),
+  // accepted and waiting for the mower to move, or refused.
+  let sending = $state(null);
+  let step = $state(null); // { kind: 'accepted' | 'slow' | 'refused', from, at }
+
+  async function order(key, val, label) {
+    if (sending) return;
+    sending = key;
+    step = null;
+    const from = state;
+    const res = await act(`${id}/${key}`, val, label);
+    sending = null;
+    if (res === 'ok') step = { kind: 'accepted', from, at: Date.now() };
+    else if (res === 'error') step = { kind: 'refused', from, at: Date.now() };
+  }
+
+  // The mower moved: the order is done. Too long without a move: say so.
+  $effect(() => {
+    if (step?.kind === 'accepted' && state !== step.from) step = null;
+  });
+  $effect(() => {
+    const s = step;
+    if (!s) return;
+    const wait = s.kind === 'accepted' ? 90_000 : 8_000;
+    const timer = setTimeout(() => {
+      if (step !== s) return;
+      step = s.kind === 'accepted' ? { ...s, kind: 'slow' } : null;
+    }, wait);
+    return () => clearTimeout(timer);
+  });
 </script>
 
 <section class="card mower">
@@ -46,22 +77,40 @@
   {/if}
 
   <div class="actions">
+    {#snippet button(key, val, label, icon, main = false)}
+      <button class:main disabled={sending !== null} aria-busy={sending === key} onclick={() => order(key, val, label)}>
+        {#if sending === key}<span class="spinner" aria-hidden="true"></span>{:else}<Icon name={icon} size={16} />{/if}
+        <span class="label">{label}</span>
+      </button>
+    {/snippet}
     {#if canWrite(dev, 'mow')}
       {#if !mowing}
-        <button class="main" onclick={() => act(`${id}/mow`, true, t('maison.tondeuse.tondre'))}><Icon name="play" size={18} />{t('maison.tondeuse.tondre')}</button>
+        {@render button('mow', true, t('maison.tondeuse.tondre'), 'play', true)}
       {:else if canWrite(dev, 'pause') && !paused}
-        <button class="main" onclick={() => act(`${id}/pause`, true, t('maison.tondeuse.pause'))}><Icon name="pause" size={18} />{t('maison.tondeuse.pause')}</button>
+        {@render button('pause', true, t('maison.tondeuse.pause'), 'pause', true)}
       {:else if canWrite(dev, 'pause') && paused}
-        <button class="main" onclick={() => act(`${id}/pause`, false, t('maison.tondeuse.reprendre'))}><Icon name="play" size={18} />{t('maison.tondeuse.reprendre')}</button>
+        {@render button('pause', false, t('maison.tondeuse.reprendre'), 'play', true)}
       {/if}
       {#if mowing}
-        <button onclick={() => act(`${id}/mow`, false, t('maison.tondeuse.arreter'))}><Icon name="stop" size={18} />{t('maison.tondeuse.arreter')}</button>
+        {@render button('mow', false, t('maison.tondeuse.arreter'), 'stop')}
       {/if}
     {/if}
     {#if canWrite(dev, 'dock') && state !== 'docked' && state !== 'returning'}
-      <button onclick={() => act(`${id}/dock`, true, t('maison.tondeuse.retour_base'))}><Icon name="home" size={18} />{t('maison.tondeuse.retour_base')}</button>
+      {@render button('dock', true, t('maison.tondeuse.retour_base'), 'home')}
     {/if}
   </div>
+
+  <p class="step {step?.kind ?? ''}" role="status" aria-live="polite" hidden={!sending && !step}>
+    {#if sending}
+      <span class="spinner" aria-hidden="true"></span>{t('maison.tondeuse.envoi')}
+    {:else if step?.kind === 'accepted'}
+      <span class="dot" aria-hidden="true"></span>{t('maison.tondeuse.accepte')}
+    {:else if step?.kind === 'slow'}
+      <Icon name="warning" size={14} />{t('maison.tondeuse.lent')}
+    {:else if step?.kind === 'refused'}
+      <Icon name="warning" size={14} />{t('maison.tondeuse.refuse')}
+    {/if}
+  </p>
 </section>
 
 <style>
@@ -121,28 +170,116 @@
 
   .actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
 
   .actions button {
+    flex: 1 1 auto;
+    min-width: 0;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 44px;
-    padding: 0 16px;
+    justify-content: center;
+    gap: 5px;
+    min-height: 38px;
+    padding: 0 10px;
     border: 1px solid var(--line);
     border-radius: 999px;
     background: var(--surface);
     color: var(--ink);
     font: inherit;
+    font-size: 14px;
     font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
+    transition: transform 120ms ease, opacity 160ms ease;
+  }
+
+  .actions button .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .actions button:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  .actions button:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  .actions button[aria-busy='true'] {
+    opacity: 1;
   }
 
   .actions button.main {
     border-color: transparent;
     background: var(--good);
     color: #fff;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 18px;
+    margin: -6px 0 0;
+    color: var(--ink-2);
+    font-size: 13px;
+  }
+
+  .step[hidden] {
+    display: none;
+  }
+
+  .step.accepted {
+    color: var(--good);
+  }
+
+  .step.slow,
+  .step.refused {
+    color: var(--alert);
+  }
+
+  .spinner {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+  }
+
+  .dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes pulse {
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner,
+    .dot {
+      animation: none;
+    }
+
+    .actions button {
+      transition: none;
+    }
   }
 </style>
