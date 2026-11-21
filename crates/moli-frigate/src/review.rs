@@ -86,9 +86,15 @@ impl Api {
         }
     }
 
-    /// Every camera's zones, from Frigate's configuration.
-    pub async fn zones(&self) -> anyhow::Result<std::collections::BTreeMap<String, ZoneOf>> {
-        Ok(zones_by_name(&self.json("/api/config").await?))
+    /// Every camera's zones and the known plates, from Frigate's configuration.
+    pub async fn zones_and_plates(
+        &self,
+    ) -> anyhow::Result<(
+        std::collections::BTreeMap<String, ZoneOf>,
+        Vec<(String, String)>,
+    )> {
+        let config = self.json("/api/config").await?;
+        Ok((zones_by_name(&config), crate::plates::known_plates(&config)))
     }
 
     /// The stream Frigate plays for a camera: the first of its

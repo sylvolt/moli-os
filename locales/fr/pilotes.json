@@ -241,6 +241,8 @@
   "pilotes.frigate.zone_nom": "Zone {zone} ({camera})",
   "pilotes.frigate.personnes": "Personnes",
   "pilotes.frigate.voitures": "Voitures",
+  "pilotes.frigate.voitures_inconnues": "Voitures inconnues",
+  "pilotes.frigate.derniere_voiture": "Dernière voiture reconnue",
   "pilotes.frigate.chiens": "Chiens",
   "pilotes.frigate.chats": "Chats",
   "pilotes.frigate.oiseaux": "Oiseaux",

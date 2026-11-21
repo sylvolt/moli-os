@@ -5,6 +5,7 @@
 //! HTTP, no credentials: the same broker Zigbee2MQTT uses.
 
 mod go2rtc;
+mod plates;
 mod review;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -59,6 +60,11 @@ pub struct Config {
     /// (`password`), Frigate's certificate pinned on first contact.
     #[serde(default)]
     pub review: Option<ReviewConfig>,
+    /// Seconds a car is given for its plate to be read before it counts as
+    /// unknown in a zone (`car_unknown`; default 15). The known plates come
+    /// from Frigate's configuration (`lpr.known_plates`, read with `review`).
+    #[serde(default)]
+    pub plate_wait_s: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -434,6 +440,13 @@ fn camera_device(ctx: &DriverCtx, camera: &str) -> Device {
             .iter()
             .map(|(_, key, label)| spec(key, &moli_i18n::tr(label), Kind::Binary, true)),
     );
+    // The last of the house's cars recognised by its plate (`lpr`).
+    points.push(spec(
+        "last_car",
+        &moli_i18n::tr!("pilotes.frigate.derniere_voiture"),
+        Kind::Text,
+        false,
+    ));
     let mut name = camera.replace('_', " ");
     if let Some(first) = name.get_mut(..1) {
         first.make_ascii_uppercase();
@@ -470,7 +483,7 @@ fn is_zone_device(instance: &str, id: &str) -> bool {
 /// it now (Frigate's counts for the zone). A sensor for the alarm (a count
 /// above 0 is active).
 fn zone_device(ctx: &DriverCtx, zone: &str, of: &review::ZoneOf) -> Device {
-    let points = OBJECTS
+    let mut points: Vec<PointSpec> = OBJECTS
         .iter()
         .map(|(key, label)| {
             let mut p = spec(
@@ -487,6 +500,20 @@ fn zone_device(ctx: &DriverCtx, zone: &str, of: &review::ZoneOf) -> Device {
             p
         })
         .collect();
+    // Cars whose plate is not one of the house's (plates.rs): the alarm's
+    // sensor instead of `car`, so that the house's cars come and go.
+    let mut unknown = spec(
+        "car_unknown",
+        &moli_i18n::tr!("pilotes.frigate.voitures_inconnues"),
+        Kind::Numeric {
+            min: Some(0.0),
+            max: None,
+            step: Some(1.0),
+        },
+        false,
+    );
+    unknown.semantic = Semantic::Occupancy;
+    points.push(unknown);
     Device {
         id: ctx.device_id(&zone_id(zone)),
         instance: ctx.instance().clone(),
@@ -505,18 +532,22 @@ fn zone_device(ctx: &DriverCtx, zone: &str, of: &review::ZoneOf) -> Device {
     }
 }
 
+/// Frigate's zones (zone → its camera and name) and the known plates
+/// (plate → car's name).
+type ZonesAndPlates = (BTreeMap<String, review::ZoneOf>, Vec<(String, String)>);
+
 /// Frigate's zones, read once from its configuration in the background,
 /// tried again with a growing pause while Frigate does not answer. Stops
 /// as soon as nobody waits for them (the driver stopped).
 async fn read_zones(
     api: std::sync::Arc<review::Api>,
-    mut tx: tokio::sync::oneshot::Sender<BTreeMap<String, review::ZoneOf>>,
+    mut tx: tokio::sync::oneshot::Sender<ZonesAndPlates>,
 ) {
     let mut pause = RETRY_FIRST;
     loop {
-        match api.zones().await {
-            Ok(zones) => {
-                let _ = tx.send(zones);
+        match api.zones_and_plates().await {
+            Ok(found) => {
+                let _ = tx.send(found);
                 return;
             }
             Err(e) => tracing::debug!(error = %e, "frigate: zones not read yet"),
@@ -688,9 +719,12 @@ fn parse<'a>(rest: &'a str, payload: &str) -> Option<Update<'a>> {
 
 /// Topics that carry what the driver uses — never the retained JPEG
 /// snapshots (`<cam>/<label>/snapshot`).
-fn subscriptions(base: &str) -> [String; 6] {
+fn subscriptions(base: &str) -> [String; 8] {
     [
         format!("{base}/available"),
+        // Cars and their plates (plates.rs).
+        format!("{base}/events"),
+        format!("{base}/tracked_object_update"),
         format!("{base}/stats"),
         format!("{base}/+/motion"),
         format!("{base}/+/+"),
@@ -730,14 +764,20 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
         tokio::spawn(read_zones(std::sync::Arc::clone(api), tx));
         rx
     });
+    let wait = config
+        .plate_wait_s
+        .map_or(plates::WAIT, Duration::from_secs);
     let mut seen = Seen {
         available: true,
+        plates: plates::Plates::new(Vec::new(), wait),
         ..Seen::default()
     };
     let mut connected = false;
     let mut paused_until: Option<tokio::time::Instant> = None;
     ctx.ready();
     loop {
+        // A car waiting for its plate turns unknown then (plates.rs).
+        let plate_deadline = seen.plates.next_deadline(tokio::time::Instant::now());
         tokio::select! {
             command = ctx.next_command() => {
                 let Some(command) = command else { return Ok(()) };
@@ -750,7 +790,9 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
             }
             found = async { zones_coming.as_mut().expect("guarded").await }, if zones_coming.is_some() => {
                 zones_coming = None;
-                let Ok(found) = found else { continue };
+                let Ok((found, known)) = found else { continue };
+                tracing::info!(instance = %ctx.instance(), plates = known.len(), "frigate: known plates read");
+                seen.plates.set_known(known);
                 // A zone gone from Frigate's configuration leaves Moli too
                 // (`zone.` is never a camera's id, nor the server's).
                 let keep: Vec<_> = found.keys().map(|z| ctx.device_id(&zone_id(z))).collect();
@@ -764,6 +806,9 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                     ctx.set_availability(&ctx.device_id(&zone_id(zone)), seen.available && connected);
                 }
                 seen.zones = found;
+            }
+            () = async { tokio::time::sleep_until(plate_deadline.unwrap_or_else(tokio::time::Instant::now)).await }, if plate_deadline.is_some() => {
+                seen.refresh_unknown(ctx);
             }
             changed = certificate_lost(certificate.as_mut()) => {
                 return park(ctx, stopped_on(config, ctx, &changed)).await;
@@ -809,6 +854,10 @@ struct Seen {
     available: bool,
     /// The server's device, declared at the first `stats`.
     server: bool,
+    /// Cars and their plates.
+    plates: plates::Plates,
+    /// Zone → unknown cars last told (`car_unknown`).
+    unknown: BTreeMap<String, i64>,
 }
 
 impl Seen {
@@ -834,6 +883,27 @@ impl Seen {
                     Value::Bool(self.available),
                 );
             }
+            return;
+        }
+        if rest == "events" || rest == "tracked_object_update" {
+            let now = tokio::time::Instant::now();
+            self.plates.forget_old(now);
+            let named = if rest == "events" {
+                self.plates.event(payload, now)
+            } else {
+                self.plates.lpr(payload, now)
+            };
+            if let Some((camera, name)) = named {
+                tracing::info!(instance = %ctx.instance(), %camera, car = %name, "frigate: known car");
+                if self.cameras.contains(&camera) {
+                    ctx.set_state(
+                        &ctx.device_id(&camera),
+                        "last_car",
+                        Value::Text(name.into()),
+                    );
+                }
+            }
+            self.refresh_unknown(ctx);
             return;
         }
         if rest == "stats" {
@@ -866,6 +936,20 @@ impl Seen {
             ctx.set_availability(&ctx.device_id(camera), self.available);
         }
         ctx.set_state(&ctx.device_id(camera), key, value);
+    }
+}
+
+impl Seen {
+    /// Each zone's unknown cars, told when the count changes.
+    fn refresh_unknown(&mut self, ctx: &DriverCtx) {
+        let now = tokio::time::Instant::now();
+        for zone in self.zones.keys() {
+            let n = self.plates.unknown_in(zone, now);
+            if self.unknown.get(zone) != Some(&n) {
+                self.unknown.insert(zone.clone(), n);
+                ctx.set_state(&ctx.device_id(&zone_id(zone)), "car_unknown", Value::Int(n));
+            }
+        }
     }
 }
 
