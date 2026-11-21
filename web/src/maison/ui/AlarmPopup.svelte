@@ -14,6 +14,7 @@
    *
    *    "alarm_popup": {
    *      "modes": ["home"],                 // the alarm's modes it opens in (default: all)
+   *      "title": "Quelqu'un au portail",   // what it says (default: « Mouvement dehors »)
    *      "camera": "frigate:eye",           // the camera shown live
    *      "tiles": [{ "id": "…", "name": "Portail", "icon": "gate", "also": [] }]
    *    }
@@ -75,7 +76,7 @@
   <div class="popup" role="alertdialog" aria-modal="true" aria-labelledby="alarm-popup-title">
     <header>
       <div>
-        <h2 id="alarm-popup-title"><Icon name="alert" size={22} />{t('maison.alarme_fenetre.titre')}</h2>
+        <h2 id="alarm-popup-title"><Icon name="bell" size={22} />{cfg?.title || t('maison.alarme_fenetre.titre')}</h2>
         {#if cause}<p class="cause">{cause}</p>{/if}
         {#if state !== 'triggered'}<p class="calm">{t('maison.alarme_fenetre.calmee')}</p>{/if}
       </div>
@@ -125,7 +126,7 @@
     border-radius: var(--r-xl);
     background: var(--surface);
     color: var(--ink);
-    border: 2px solid var(--alert);
+    border: 2px solid var(--warm);
     box-shadow: var(--shadow-lift);
   }
 
@@ -141,7 +142,7 @@
     align-items: center;
     gap: 8px;
     margin: 0;
-    color: var(--alert);
+    color: var(--warm-ink);
     font-size: 1.3rem;
   }
 
@@ -190,8 +191,8 @@
     padding: 12px 26px;
     border: 0;
     border-radius: 999px;
-    background: var(--alert);
-    color: #fff;
+    background: var(--warm);
+    color: #1d1a15;
     font: inherit;
     font-weight: 650;
     cursor: pointer;
