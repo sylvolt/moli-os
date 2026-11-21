@@ -786,9 +786,19 @@ struct Known {
     product: Option<String>,
     custom: Option<String>,
     shown: bool,
+    /// Marked unavailable when the GX went out of reach.
+    away: bool,
 }
 
 impl Known {
+    /// A value came: whether the device must be told available again (first
+    /// seen, or back after the GX was out of reach).
+    fn back(&mut self) -> bool {
+        let back = self.away;
+        self.away = false;
+        back
+    }
+
     fn name(&self) -> Option<&str> {
         self.custom
             .as_deref()
@@ -896,6 +906,10 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                         ctx.upsert_device(device(ctx, service, instance, k.name()));
                         ctx.set_availability(&id, true);
                         routes.insert(id.clone(), entry);
+                    } else if k.back() {
+                        // Back after a cut (the network, the box restarting):
+                        // without this, it stayed « unavailable » with fresh values.
+                        ctx.set_availability(&id, true);
                     }
                     ctx.set_state(&id, topic.key, value);
                 }
@@ -905,6 +919,9 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                     tracing::debug!(instance = %ctx.instance(), error = %e, "victron GX unreachable");
                     for id in routes.keys() {
                         ctx.set_availability(id, false);
+                    }
+                    for k in known.values_mut() {
+                        k.away = k.shown;
                     }
                     paused_until = Some(tokio::time::Instant::now() + Duration::from_secs(5));
                 }
@@ -1143,5 +1160,17 @@ mod tests {
             }
         }
         assert_eq!(read, TABLE.len());
+    }
+
+    #[test]
+    fn a_device_is_available_again_after_a_cut() {
+        let mut k = Known {
+            shown: true,
+            ..Known::default()
+        };
+        assert!(!k.back(), "nothing to tell while connected");
+        k.away = true; // the GX went out of reach
+        assert!(k.back(), "the first value after the cut");
+        assert!(!k.back(), "once only");
     }
 }
