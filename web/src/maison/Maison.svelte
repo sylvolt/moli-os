@@ -6,6 +6,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import Icon from './ui/Icon.svelte';
   import PinSheet from './ui/PinSheet.svelte';
+  import AlarmPopup from './ui/AlarmPopup.svelte';
   import Correct from './moli/Correct.svelte';
   import Setup from './ui/Setup.svelte';
   import Login from './ui/Login.svelte';
@@ -244,6 +245,9 @@
   {#if moli.fix}
     <Correct />
   {/if}
+
+  <!-- The alarm went off: its camera live and what to do (home.json alarm_popup). -->
+  <AlarmPopup />
 
   {#if home.held}
     <PinSheet />
