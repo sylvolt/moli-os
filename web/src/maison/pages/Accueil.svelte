@@ -31,7 +31,8 @@
     return { value: value(point.slice(0, i), point.slice(i + 1)) };
   });
   // `favorites.switches` : the on/off things worth a button here (plugs, a
-  // gate relay…), `{ id, name, icon, point }`.
+  // gate relay…), `{ id, name, icon, point, also }` (`also`: other devices
+  // switched with this one, on when any of them is).
   const switches = $derived(cfg.favorites?.switches ?? []);
   // A robot goes through every room: it belongs to none.
   const robots = $derived(Object.values(hub.devices).filter((d) => deviceKind(d) === 'vacuum' && !hidden(d.id)));
@@ -336,7 +337,7 @@
         <div class="card-head"><h2><Icon name="socket" size={18} />{t('maison.accueil.appareils')}</h2></div>
         <div class="tiles">
           {#each switches as s (s.id + (s.point ?? ''))}
-            <LightTile id={s.id} name={s.name} icon={s.icon ?? 'socket'} point={s.point ?? null} />
+            <LightTile id={s.id} name={s.name} icon={s.icon ?? 'socket'} point={s.point ?? null} also={s.also ?? []} />
           {/each}
         </div>
       </section>
