@@ -512,6 +512,8 @@ const STYLE = `
     --epc-save: #2a78d6;
     --epc-track: #cde2fb;
     --epc-cost: #898781;
+    --epc-bg: var(--ha-card-background, var(--card-background-color, #fff));
+    --epc-shade: rgba(0, 0, 0, 0.16);
     display: block;
   }
   :host([dark]) {
@@ -520,9 +522,12 @@ const STYLE = `
     --epc-hover: rgba(255, 255, 255, 0.06);
     --epc-save: #3987e5;
     --epc-track: rgba(57, 135, 229, 0.25);
+    --epc-shade: rgba(0, 0, 0, 0.5);
   }
   ha-card { padding: 16px; overflow: hidden; }
   .head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 12px; }
+  /* Moli : bilans côte à côte, le sous-titre toujours sous le titre (tuiles alignées d'une carte à l'autre). */
+  .head.stack { flex-direction: column; align-items: flex-start; gap: 2px; }
   .title { font-size: 18px; font-weight: 500; color: var(--primary-text-color); }
   .sub { font-size: 13px; color: var(--secondary-text-color); }
   .msg { color: var(--secondary-text-color); font-size: 14px; padding: 8px 0; }
@@ -538,6 +543,8 @@ const STYLE = `
   .t-label { font-size: 13px; color: var(--secondary-text-color); }
   .t-value { font-size: 26px; font-weight: 600; color: var(--primary-text-color); line-height: 1.25; margin-top: 2px; white-space: nowrap; }
   .t-value.txt { font-size: 18px; line-height: 1.8; }
+  /* Moli : un texte long (« ≈ septembre 2030 ») passe à la ligne plutôt que de sortir de la tuile. */
+  @media (max-width: 600px) { .t-value.txt { white-space: normal; line-height: 1.3; margin: 6px 0 4px; } }
   .t-value .u { font-size: 15px; font-weight: 500; color: var(--secondary-text-color); }
   .t-delta { font-size: 13px; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 0 6px; }
   .t-extra { font-size: 12px; color: var(--secondary-text-color); margin-top: 2px; }
@@ -601,7 +608,16 @@ const STYLE = `
   .tip .f { border-top: 1px solid var(--divider-color); margin-top: 6px; padding-top: 4px; }
 
   /* Tableaux */
-  .scroll { overflow-x: auto; max-width: 100%; margin-top: 12px; }
+  /* Moli : quand le tableau déborde, une ombre au bord dit qu'il y a d'autres colonnes (elle s'efface
+     au bout), et la première colonne reste en place. */
+  .scroll {
+    overflow-x: auto; max-width: 100%; margin-top: 12px;
+    background:
+      linear-gradient(to left, var(--epc-bg) 40%, transparent) right center / 28px 100% no-repeat local,
+      radial-gradient(farthest-side at 100% 50%, var(--epc-shade), transparent) right center / 12px 100% no-repeat scroll;
+  }
+  .scroll th:first-child, .scroll td:first-child { position: sticky; left: 0; z-index: 1; background: var(--epc-bg); padding-right: 10px; }
+  .scroll tr.now td:first-child { background: linear-gradient(var(--epc-hover), var(--epc-hover)), var(--epc-bg); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   th { font-weight: 500; color: var(--secondary-text-color); text-align: right; padding: 6px; border-bottom: 1px solid var(--divider-color); white-space: nowrap; }
   td { text-align: right; padding: 5px 6px; border-bottom: 1px solid var(--divider-color); color: var(--primary-text-color); white-space: nowrap; }
@@ -781,7 +797,7 @@ class EnergyPerfCard extends HTMLElement {
       })
       .join("");
 
-    return `<div class="head"><div class="title">${esc(title)}</div><div class="sub">${esc(sub)}</div></div>
+    return `<div class="head stack"><div class="title">${esc(title)}</div><div class="sub">${esc(sub)}</div></div>
       <div class="tiles">${tiles}</div>`;
   }
 
