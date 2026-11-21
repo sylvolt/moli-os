@@ -5,6 +5,7 @@
   import Icon from '../ui/Icon.svelte';
   import Gauge from '../ui/infra/Gauge.svelte';
   import Spark from '../ui/infra/Spark.svelte';
+  import HistoryChart from '../ui/HistoryChart.svelte';
   import PcCard from '../ui/infra/PcCard.svelte';
   import ProxmoxCard from '../ui/infra/ProxmoxCard.svelte';
   import { proxmoxNodes, proxmoxIssues } from '../lib/proxmox.js';
@@ -83,6 +84,13 @@
     return out;
   });
   const stale = $derived(infra && home.now - infra.ts > 5 * 60_000);
+  // The last day, as charts: each Proxmox server's guests (8 at most a
+  // chart), and the box's rates.
+  const guestCharts = $derived(
+    nodes
+      .filter((g) => g.guests.length)
+      .map((g) => ({ instance: g.instance, ids: g.guests.slice(0, 8).map((d) => d.id) })),
+  );
 </script>
 
 <div class="infra">
@@ -207,6 +215,18 @@
 
     {#if boxCfg}
       <BoxCard box={boxCfg} />
+    {/if}
+
+    {#each guestCharts as c (c.instance)}
+      <HistoryChart title={t('systeme.infra.historique.processeur')} minutes={1440} points={c.ids.map((id) => `${id}/cpu`)} />
+      <HistoryChart title={t('systeme.infra.historique.memoire')} minutes={1440} points={c.ids.map((id) => `${id}/memory`)} />
+    {/each}
+    {#if boxCfg?.down || boxCfg?.up}
+      <HistoryChart
+        title={t('systeme.infra.historique.debit', { box: boxCfg.name ?? 'Box' })}
+        minutes={1440}
+        points={[boxCfg.down, boxCfg.up].filter(Boolean)}
+      />
     {/if}
 
     {#if box}

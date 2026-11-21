@@ -3,6 +3,7 @@
   import { t, locale } from '../../../lib/i18n.svelte.js';
   import Icon from '../Icon.svelte';
   import Gauge from './Gauge.svelte';
+  import Spark from './Spark.svelte';
 
   /** A Proxmox node (the `proxmox` driver, `lib/proxmox.js`): the node's
    *  gauges, one line per guest, its storages, the last backup, its disks.
@@ -51,6 +52,13 @@
     />
     <Gauge label={t('systeme.infra.proxmox.disque_systeme')} value={v(node, 'root')} warn={[85, 93]} />
   </div>
+  {#if node}
+    <!-- The server's last day, under its gauges. -->
+    <div class="sparks">
+      <Spark point="{node.id}/cpu" label={t('systeme.infra.processeur')} unit={t('systeme.format.unite_pourcent')} max={100} hours={24} />
+      <Spark point="{node.id}/memory" label={t('systeme.infra.memoire')} unit={t('systeme.format.unite_pourcent')} max={100} hours={24} />
+    </div>
+  {/if}
   {#if typeof updates === 'number' && updates > 0}
     <p class="note"><Icon name="warning" size={15} />{t('systeme.infra.proxmox.mises_a_jour', { count: updates })}</p>
   {/if}
@@ -141,6 +149,13 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 12px;
+  }
+
+  .sparks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
   }
 
   .note {
