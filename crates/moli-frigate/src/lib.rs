@@ -806,6 +806,9 @@ async fn run(config: &Config, ctx: &mut DriverCtx) -> anyhow::Result<()> {
                     ctx.set_availability(&ctx.device_id(&zone_id(zone)), seen.available && connected);
                 }
                 seen.zones = found;
+                // A value from the start: the alarm takes a sensor without
+                // one for silent.
+                seen.refresh_unknown(ctx);
             }
             () = async { tokio::time::sleep_until(plate_deadline.unwrap_or_else(tokio::time::Instant::now)).await }, if plate_deadline.is_some() => {
                 seen.refresh_unknown(ctx);
