@@ -56,6 +56,7 @@ moli-izypower = { path = "crates/moli-izypower" }
 moli-solarman = { path = "crates/moli-solarman" }
 moli-vicare = { path = "crates/moli-vicare" }
 moli-igd = { path = "crates/moli-igd" }
+moli-freebox = { path = "crates/moli-freebox" }
 moli-ipp = { path = "crates/moli-ipp" }
 moli-assistant = { path = "crates/moli-assistant" }
 moli-automation = { path = "crates/moli-automation" }
